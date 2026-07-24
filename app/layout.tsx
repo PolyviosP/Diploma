@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="el" className={`${inter.variable} ${sourceSerif.variable} bg-background`}>
+    <html lang="el" className={`${inter.variable} ${sourceSerif.variable} bg-background light`}>
       <body className="font-sans antialiased">
         <ToastProvider>{children}</ToastProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
