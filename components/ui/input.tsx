@@ -11,14 +11,6 @@ function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
   return <textarea className={cn(baseField, 'min-h-24 resize-y', className)} {...props} />
 }
 
-function Select({ className, children, ...props }: React.ComponentProps<'select'>) {
-  return (
-    <select className={cn(baseField, 'h-9 cursor-pointer pr-8', className)} {...props}>
-      {children}
-    </select>
-  )
-}
-
 function Label({ className, ...props }: React.ComponentProps<'label'>) {
   return (
     <label
@@ -28,4 +20,4 @@ function Label({ className, ...props }: React.ComponentProps<'label'>) {
   )
 }
 
-export { Input, Textarea, Select, Label }
+export { Input, Textarea, Label }

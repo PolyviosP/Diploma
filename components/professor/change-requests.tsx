@@ -5,7 +5,8 @@ import { FileEdit, Plus, Send, ArrowRight } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Input, Select, Textarea, Label } from '@/components/ui/input'
+import { Input, Textarea, Label } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Notice } from '@/components/ui/notice'
 import { EmptyState } from '@/components/ui/page'
 import { ChangeRequestBadge } from '@/components/ui/badge'
@@ -137,13 +138,15 @@ export function ChangeRequests({
         <div className="space-y-4">
           <div>
             <Label htmlFor="topic">Διπλωματική</Label>
-            <Select id="topic" value={topicId} onChange={(e) => setTopicId(e.target.value)}>
-              {supervised.map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.id} — {topic.student}
-                </option>
-              ))}
-            </Select>
+            <Select
+              id="topic"
+              value={topicId}
+              onValueChange={setTopicId}
+              items={supervised.map((topic) => ({
+                value: topic.id,
+                label: `${topic.id} — ${topic.student}`,
+              }))}
+            />
           </div>
           {selected ? (
             <div>

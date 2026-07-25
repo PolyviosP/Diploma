@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { Search, SlidersHorizontal, Download, FileSearch } from 'lucide-react'
-import { Input, Select } from '@/components/ui/input'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/page'
 import { Badge, StatusBadge } from '@/components/ui/badge'
@@ -119,43 +120,34 @@ export function ThesesTable({ topics }: { topics: Topic[] }) {
             <SlidersHorizontal className="size-4 shrink-0 text-muted-foreground" />
             <Select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="min-w-40"
+              onValueChange={setStatus}
+              className="w-auto"
               aria-label="Κατάσταση"
-            >
-              <option value="all">Όλες οι καταστάσεις</option>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_META[s].label}
-                </option>
-              ))}
-            </Select>
+              items={[
+                { value: 'all', label: 'Όλες οι καταστάσεις' },
+                ...STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_META[s].label })),
+              ]}
+            />
             <Select
               value={professor}
-              onChange={(e) => setProfessor(e.target.value)}
-              className="min-w-44"
+              onValueChange={setProfessor}
+              className="w-auto"
               aria-label="Επιβλέπων"
-            >
-              <option value="all">Όλοι οι διδάσκοντες</option>
-              {PROFESSORS.map((p) => (
-                <option key={p.name} value={p.name}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
+              items={[
+                { value: 'all', label: 'Όλοι οι διδάσκοντες' },
+                ...PROFESSORS.map((p) => ({ value: p.name, label: p.name })),
+              ]}
+            />
             <Select
               value={year}
-              onChange={(e) => setYear(e.target.value)}
-              className="min-w-28"
+              onValueChange={setYear}
+              className="w-auto"
               aria-label="Έτος"
-            >
-              <option value="all">Όλα τα έτη</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </Select>
+              items={[
+                { value: 'all', label: 'Όλα τα έτη' },
+                ...years.map((y) => ({ value: y, label: y })),
+              ]}
+            />
           </div>
         </div>
       </div>

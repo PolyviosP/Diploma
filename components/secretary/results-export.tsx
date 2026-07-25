@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react'
 import { Download, Award, FileSearch } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, Label } from '@/components/ui/input'
+import { Label } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { EmptyState } from '@/components/ui/page'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
@@ -99,29 +100,27 @@ export function ResultsExport({ topics }: { topics: Topic[] }) {
               <Select
                 id="year"
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="min-w-36"
-              >
-                <option value="all">Όλα τα έτη</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setYear}
+                className="w-auto"
+                items={[
+                  { value: 'all', label: 'Όλα τα έτη' },
+                  ...years.map((y) => ({ value: y, label: y })),
+                ]}
+              />
             </div>
             <div>
               <Label htmlFor="outcome">Αποτέλεσμα</Label>
               <Select
                 id="outcome"
                 value={outcome}
-                onChange={(e) => setOutcome(e.target.value)}
-                className="min-w-36"
-              >
-                <option value="all">Όλα</option>
-                <option value="passed">Επιτυχία</option>
-                <option value="failed">Αποτυχία</option>
-              </Select>
+                onValueChange={setOutcome}
+                className="w-auto"
+                items={[
+                  { value: 'all', label: 'Όλα' },
+                  { value: 'passed', label: 'Επιτυχία' },
+                  { value: 'failed', label: 'Αποτυχία' },
+                ]}
+              />
             </div>
           </div>
           <Button onClick={exportCsv} disabled={rows.length === 0}>

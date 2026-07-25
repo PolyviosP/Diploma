@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, LayoutGrid, List, SlidersHorizontal, FileSearch, Loader2 } from 'lucide-react'
-import { Input, Select } from '@/components/ui/input'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { TopicCard } from '@/components/topic-card'
 import { EmptyState } from '@/components/ui/page'
@@ -62,28 +63,28 @@ export function TopicSearch({ topics }: { topics: Topic[] }) {
               className="pl-9"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SlidersHorizontal className="size-4 shrink-0 text-muted-foreground" />
-            <Select value={area} onChange={(e) => setArea(e.target.value)} className="min-w-40">
-              <option value="all">Όλες οι περιοχές</option>
-              {AREAS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </Select>
+            <Select
+              value={area}
+              onValueChange={setArea}
+              aria-label="Γνωστικό αντικείμενο"
+              className="w-auto"
+              items={[
+                { value: 'all', label: 'Όλες οι περιοχές' },
+                ...AREAS.map((a) => ({ value: a, label: a })),
+              ]}
+            />
             <Select
               value={professor}
-              onChange={(e) => setProfessor(e.target.value)}
-              className="min-w-44"
-            >
-              <option value="all">Όλοι οι διδάσκοντες</option>
-              {professors.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </Select>
+              onValueChange={setProfessor}
+              aria-label="Διδάσκων"
+              className="w-auto"
+              items={[
+                { value: 'all', label: 'Όλοι οι διδάσκοντες' },
+                ...professors.map((p) => ({ value: p, label: p })),
+              ]}
+            />
           </div>
         </div>
       </div>

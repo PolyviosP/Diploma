@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Save, X, Upload, Languages } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input, Textarea, Select, Label } from '@/components/ui/input'
+import { Input, Textarea, Label } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Tabs } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
 import { AREAS } from '@/lib/data'
@@ -142,13 +143,12 @@ export function NewTopicForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="area">Γνωστικό αντικείμενο</Label>
-              <Select id="area" value={area} onChange={(e) => setArea(e.target.value)}>
-                {AREAS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </Select>
+              <Select
+                id="area"
+                value={area}
+                onValueChange={setArea}
+                items={AREAS.map((a) => ({ value: a, label: a }))}
+              />
             </div>
             <div>
               <Label htmlFor="tags">Ετικέτες (χωρισμένες με κόμμα)</Label>
