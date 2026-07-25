@@ -1,8 +1,8 @@
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { WORKFLOW_STEPS, STATUS_META, type ThesisStatus } from '@/lib/data'
+import { WORKFLOW_STEPS, STATUS_META, type DiplomaStatus } from '@/lib/data'
 
-export function WorkflowSteps({ current }: { current: ThesisStatus }) {
+export function WorkflowSteps({ current }: { current: DiplomaStatus }) {
   const currentStep = STATUS_META[current].step
 
   return (

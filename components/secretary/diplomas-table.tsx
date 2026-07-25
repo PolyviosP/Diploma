@@ -23,14 +23,14 @@ import {
   finalGradeFor,
   formatDate,
   gradesFor,
-  type ThesisStatus,
+  type DiplomaStatus,
   type Topic,
 } from '@/lib/data'
 
-const STATUS_OPTIONS: ThesisStatus[] = ['assigned', 'review', 'completed']
+const STATUS_OPTIONS: DiplomaStatus[] = ['assigned', 'review', 'completed']
 
 /** FR-A1 / FR-A2 — προβολή όλων των διπλωματικών με φίλτρα και εξαγωγή CSV. */
-export function ThesesTable({ topics }: { topics: Topic[] }) {
+export function DiplomasTable({ topics }: { topics: Topic[] }) {
   const { toast } = useToast()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')

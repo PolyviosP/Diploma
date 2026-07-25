@@ -1,11 +1,11 @@
-// Mock data & domain types for the thesis management prototype.
+// Mock data & domain types for the diploma management prototype.
 // No backend — everything here is static demo data (θα αντικατασταθεί από το API).
 
 /* -------------------------------------------------------------------------- */
 /*  Καταστάσεις θέματος / διπλωματικής                                          */
 /* -------------------------------------------------------------------------- */
 
-export type ThesisStatus =
+export type DiplomaStatus =
   | 'draft' // ΥΠΟ-ΕΠΕΞΕΡΓΑΣΙΑ
   | 'available' // ΔΙΑΘΕΣΙΜΟ
   | 'assigned' // ΑΝΑΤΕΘΕΙΜΕΝΟ
@@ -13,7 +13,7 @@ export type ThesisStatus =
   | 'completed' // ΟΛΟΚΛΗΡΩΜΕΝΟ
 
 export const STATUS_META: Record<
-  ThesisStatus,
+  DiplomaStatus,
   { label: string; className: string; step: number }
 > = {
   draft: {
@@ -43,7 +43,7 @@ export const STATUS_META: Record<
   },
 }
 
-export const WORKFLOW_STEPS: { status: ThesisStatus; label: string }[] = [
+export const WORKFLOW_STEPS: { status: DiplomaStatus; label: string }[] = [
   { status: 'draft', label: 'Υπό επεξεργασία' },
   { status: 'available', label: 'Διαθέσιμο' },
   { status: 'assigned', label: 'Ανατεθειμένο' },
@@ -211,7 +211,7 @@ export type Topic = {
   professor: string
   area: string
   tags: string[]
-  status: ThesisStatus
+  status: DiplomaStatus
   createdAt: string
   student?: string
   studentAm?: string
@@ -241,7 +241,7 @@ export const TOPICS: Topic[] = [
     description:
       'Η εργασία εστιάζει στη σχεδίαση και εκπαίδευση νευρωνικών δικτύων για την ανίχνευση ανωμαλιών σε δεδομένα δικτυακής κίνησης IoT. Θα μελετηθούν αρχιτεκτονικές LSTM και autoencoders, θα γίνει σύγκριση απόδοσης και θα αξιολογηθεί η ανθεκτικότητα σε πραγματικά σύνολα δεδομένων.',
     descriptionEn:
-      'The thesis focuses on designing and training neural networks for anomaly detection in IoT network traffic. LSTM and autoencoder architectures are compared and evaluated for robustness on real-world datasets.',
+      'The work focuses on designing and training neural networks for anomaly detection in IoT network traffic. LSTM and autoencoder architectures are compared and evaluated for robustness on real-world datasets.',
     prerequisites: ['Μηχανική Μάθηση', 'Δίκτυα Υπολογιστών', 'Καλή γνώση Python'],
     professor: 'Δρ. Γεώργιος Αντωνίου',
     area: 'Ασφάλεια',
@@ -314,7 +314,7 @@ export const TOPICS: Topic[] = [
     description:
       'Η εργασία διερευνά transformer-based προσεγγίσεις για abstractive summarization σε ελληνικά νομικά κείμενα, με έμφαση στη διατήρηση της νομικής ορολογίας.',
     descriptionEn:
-      'The thesis explores transformer-based approaches for abstractive summarization of Greek legal texts, with emphasis on preserving legal terminology.',
+      'The work explores transformer-based approaches for abstractive summarization of Greek legal texts, with emphasis on preserving legal terminology.',
     prerequisites: ['Επεξεργασία Φυσικής Γλώσσας', 'Μηχανική Μάθηση'],
     professor: 'Δρ. Γεώργιος Αντωνίου',
     area: 'Τεχνητή Νοημοσύνη',
@@ -941,7 +941,7 @@ export const NOTIFICATIONS = [
   },
 ]
 
-export function statusMeta(status: ThesisStatus) {
+export function statusMeta(status: DiplomaStatus) {
   return STATUS_META[status]
 }
 

@@ -31,10 +31,10 @@ const FILTERS: { value: string; label: string; match: (a: Application) => boolea
 
 export function ApplicationsList({
   applications,
-  hasActiveThesis,
+  hasActiveDiploma,
 }: {
   applications: Application[]
-  hasActiveThesis: boolean
+  hasActiveDiploma: boolean
 }) {
   const { toast } = useToast()
   const [filter, setFilter] = useState('all')
@@ -69,7 +69,7 @@ export function ApplicationsList({
 
   return (
     <div className="space-y-5">
-      {hasActiveThesis && activeCount > 0 ? (
+      {hasActiveDiploma && activeCount > 0 ? (
         <Notice variant="warning" title="Έχεις ήδη ενεργή διπλωματική εργασία">
           Σύμφωνα με τον κανόνα BR-1 κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική.
           Οι {activeCount} εκκρεμείς δηλώσεις σου θα πρέπει να ανακληθούν ή θα απορριφθούν αυτόματα.

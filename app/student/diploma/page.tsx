@@ -21,10 +21,10 @@ import {
   formatDate,
 } from '@/lib/data'
 
-export default function StudentThesisPage() {
-  const thesis = TOPICS.find((t) => t.student === CURRENT_STUDENT)
+export default function StudentDiplomaPage() {
+  const diploma = TOPICS.find((t) => t.student === CURRENT_STUDENT)
 
-  if (!thesis) {
+  if (!diploma) {
     return (
       <div className="space-y-6">
         <PageHeader title="Η διπλωματική μου" />
@@ -44,37 +44,37 @@ export default function StudentThesisPage() {
   }
 
   const changeRequest = CHANGE_REQUESTS.find(
-    (r) => r.topicId === thesis.id && r.student === CURRENT_STUDENT,
+    (r) => r.topicId === diploma.id && r.student === CURRENT_STUDENT,
   )
-  const annotations = ANNOTATIONS.filter((a) => a.topicId === thesis.id)
+  const annotations = ANNOTATIONS.filter((a) => a.topicId === diploma.id)
   // UC-13 — οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
-  const gradesVisible = thesis.status === 'completed'
+  const gradesVisible = diploma.status === 'completed'
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Η διπλωματική μου" description={`Κωδικός: ${thesis.id}`}>
-        <StatusBadge status={thesis.status} />
+      <PageHeader title="Η διπλωματική μου" description={`Κωδικός: ${diploma.id}`}>
+        <StatusBadge status={diploma.status} />
       </PageHeader>
 
       {changeRequest ? <ChangeRequestCard request={changeRequest} /> : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>{thesis.title}</CardTitle>
-          <p className="text-sm text-muted-foreground">{thesis.titleEn}</p>
+          <CardTitle>{diploma.title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{diploma.titleEn}</p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <p className="text-sm text-muted-foreground text-pretty">{thesis.description}</p>
-          <WorkflowSteps current={thesis.status} />
+          <p className="text-sm text-muted-foreground text-pretty">{diploma.description}</p>
+          <WorkflowSteps current={diploma.status} />
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-sm">
             <div>
               <span className="text-muted-foreground">Επιβλέπων: </span>
-              <span className="font-medium">{thesis.professor}</span>
+              <span className="font-medium">{diploma.professor}</span>
             </div>
-            {thesis.deadline ? (
+            {diploma.deadline ? (
               <div>
                 <span className="text-muted-foreground">Προθεσμία: </span>
-                <span className="font-medium">{formatDate(thesis.deadline)}</span>
+                <span className="font-medium">{formatDate(diploma.deadline)}</span>
               </div>
             ) : null}
           </div>
@@ -89,9 +89,9 @@ export default function StudentThesisPage() {
             <CardTitle>Τριμελής επιτροπή</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {thesis.committee ? (
+            {diploma.committee ? (
               <>
-                {thesis.committee.map((member, i) => (
+                {diploma.committee.map((member, i) => (
                   <div key={member} className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Avatar name={member} className="size-8" />
@@ -101,7 +101,7 @@ export default function StudentThesisPage() {
                   </div>
                 ))}
                 <div className="border-t border-border pt-3">
-                  <GradeProgress topicId={thesis.id} />
+                  <GradeProgress topicId={diploma.id} />
                 </div>
               </>
             ) : (
@@ -143,9 +143,9 @@ export default function StudentThesisPage() {
           <CardTitle>Βαθμολογία</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <FinalGradeBlock topic={thesis} />
+          <FinalGradeBlock topic={diploma} />
           {gradesVisible ? (
-            <GradeBreakdown topicId={thesis.id} />
+            <GradeBreakdown topicId={diploma.id} />
           ) : (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <MessageSquare className="size-4 shrink-0" />

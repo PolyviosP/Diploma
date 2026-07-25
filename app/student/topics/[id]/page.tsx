@@ -43,7 +43,7 @@ export default async function TopicDetailPage({
   const alreadyApplied = myApplications.some(
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),
   )
-  const hasActiveThesis = TOPICS.some(
+  const hasActiveDiploma = TOPICS.some(
     (t) => t.student === CURRENT_STUDENT && t.status !== 'completed',
   )
 
@@ -54,7 +54,7 @@ export default async function TopicDetailPage({
         title: 'Δεν πληρείς τις προϋποθέσεις',
         detail: eligibility.reasons.join(' '),
       }
-    : hasActiveThesis
+    : hasActiveDiploma
       ? {
           blocked: true,
           title: 'Έχεις ήδη διπλωματική',

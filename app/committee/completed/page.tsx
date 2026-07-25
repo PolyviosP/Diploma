@@ -7,7 +7,7 @@ import { FinalGradeBlock, GradeBreakdown } from '@/components/grading/grade-summ
 import { CURRENT_COMMITTEE_MEMBER, TOPICS, formatDate } from '@/lib/data'
 
 export default function CommitteeCompletedPage() {
-  const theses = TOPICS.filter(
+  const diplomas = TOPICS.filter(
     (t) => t.committee?.includes(CURRENT_COMMITTEE_MEMBER) && t.status === 'completed',
   )
 
@@ -18,7 +18,7 @@ export default function CommitteeCompletedPage() {
         description="Διπλωματικές που έχουν εξεταστεί και ο τελικός βαθμός έχει οριστικοποιηθεί."
       />
 
-      {theses.length === 0 ? (
+      {diplomas.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           title="Καμία ολοκληρωμένη αξιολόγηση"
@@ -26,7 +26,7 @@ export default function CommitteeCompletedPage() {
         />
       ) : (
         <div className="grid gap-6">
-          {theses.map((topic) => (
+          {diplomas.map((topic) => (
             <Card key={topic.id}>
               <CardHeader className="flex-row items-start justify-between gap-3">
                 <div className="min-w-0">

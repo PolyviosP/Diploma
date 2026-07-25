@@ -8,7 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { GradeProgress } from '@/components/grading/grade-summary'
 import { CURRENT_PROFESSOR, TOPICS, finalGradeFor, formatDate } from '@/lib/data'
 
-export default function ProfessorThesesPage() {
+export default function ProfessorDiplomasPage() {
   const supervised = TOPICS.filter(
     (t) => t.professor === CURRENT_PROFESSOR && Boolean(t.student),
   )

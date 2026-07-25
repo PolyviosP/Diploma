@@ -31,7 +31,7 @@ export default function RoleSelectionPage() {
             <GraduationCap className="size-6" />
           </div>
           <div>
-            <p className="font-serif text-xl font-semibold">Θέσις</p>
+            <p className="font-serif text-xl font-semibold">Diploma</p>
             <p className="text-sm text-sidebar-foreground/60">
               Σύστημα Διαχείρισης Διπλωματικών Εργασιών
             </p>

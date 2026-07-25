@@ -42,7 +42,7 @@ export default function SecretaryDashboard() {
         title="Επισκόπηση γραμματείας"
         description="Συνολική εικόνα των διπλωματικών εργασιών του τμήματος και των εκκρεμοτήτων."
       >
-        <Button variant="outline" render={<Link href="/secretary/theses" />}>
+        <Button variant="outline" render={<Link href="/secretary/diplomas" />}>
           <Table2 className="size-4" />
           Όλες οι διπλωματικές
         </Button>
@@ -83,7 +83,7 @@ export default function SecretaryDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Πρόσφατη δραστηριότητα</CardTitle>
-            <Button variant="ghost" size="sm" render={<Link href="/secretary/theses" />}>
+            <Button variant="ghost" size="sm" render={<Link href="/secretary/diplomas" />}>
               Όλες
               <ArrowRight className="size-4" />
             </Button>

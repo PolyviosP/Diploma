@@ -7,7 +7,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/page'
-import { CURRENT_PROFESSOR, TOPICS, type ThesisStatus, type Topic } from '@/lib/data'
+import { CURRENT_PROFESSOR, TOPICS, type DiplomaStatus, type Topic } from '@/lib/data'
 
 const FILTERS: { value: string; label: string; match: (t: Topic) => boolean }[] = [
   { value: 'all', label: 'Όλα', match: () => true },
@@ -53,7 +53,7 @@ export function TopicsManager() {
                       {t.title}
                     </h3>
                   </div>
-                  <StatusBadge status={t.status as ThesisStatus} />
+                  <StatusBadge status={t.status as DiplomaStatus} />
                 </div>
                 <p className="line-clamp-2 text-sm text-muted-foreground">{t.summary}</p>
                 <div className="flex items-center justify-between border-t border-border pt-3 text-sm">

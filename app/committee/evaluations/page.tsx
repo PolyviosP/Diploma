@@ -13,7 +13,7 @@ export default function CommitteeEvaluationsPage() {
     GRADES.filter((g) => g.professor === CURRENT_COMMITTEE_MEMBER).map((g) => g.topicId),
   )
 
-  const theses = TOPICS.filter(
+  const diplomas = TOPICS.filter(
     (t) => t.committee?.includes(CURRENT_COMMITTEE_MEMBER) && t.status === 'review',
   )
 
@@ -24,7 +24,7 @@ export default function CommitteeEvaluationsPage() {
         description="Διπλωματικές εργασίες υπό εξέταση για τις οποίες συμμετέχετε στην τριμελή επιτροπή."
       />
 
-      {theses.length === 0 ? (
+      {diplomas.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
           title="Δεν υπάρχουν εργασίες υπό εξέταση"
@@ -32,7 +32,7 @@ export default function CommitteeEvaluationsPage() {
         />
       ) : (
         <div className="grid gap-4">
-          {theses.map((topic) => {
+          {diplomas.map((topic) => {
             const graded = gradedIds.has(topic.id)
             return (
               <Card key={topic.id} className="p-5">

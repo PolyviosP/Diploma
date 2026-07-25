@@ -28,14 +28,14 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { label: 'Επισκόπηση', href: '/student', icon: LayoutDashboard },
     { label: 'Αναζήτηση θεμάτων', href: '/student/topics', icon: Search },
     { label: 'Οι δηλώσεις μου', href: '/student/applications', icon: Send },
-    { label: 'Η διπλωματική μου', href: '/student/thesis', icon: FileText },
+    { label: 'Η διπλωματική μου', href: '/student/diploma', icon: FileText },
     { label: 'Προφίλ', href: '/student/profile', icon: User },
   ],
   professor: [
     { label: 'Επισκόπηση', href: '/professor', icon: LayoutDashboard },
     { label: 'Τα θέματά μου', href: '/professor/topics', icon: FolderKanban },
     { label: 'Νέο θέμα', href: '/professor/topics/new', icon: PlusCircle },
-    { label: 'Επιβλέψεις', href: '/professor/theses', icon: Users },
+    { label: 'Επιβλέψεις', href: '/professor/diplomas', icon: Users },
     { label: 'Τροποποιήσεις θεμάτων', href: '/professor/requests', icon: FileEdit },
   ],
   committee: [
@@ -45,7 +45,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   ],
   secretary: [
     { label: 'Επισκόπηση', href: '/secretary', icon: LayoutDashboard },
-    { label: 'Όλες οι διπλωματικές', href: '/secretary/theses', icon: Table2 },
+    { label: 'Όλες οι διπλωματικές', href: '/secretary/diplomas', icon: Table2 },
     { label: 'Τροποποιήσεις θεμάτων', href: '/secretary/requests', icon: FileEdit },
     { label: 'Δικαιούχοι φοιτητές', href: '/secretary/students', icon: UserCheck },
     { label: 'Αποτελέσματα', href: '/secretary/results', icon: Award },

@@ -51,7 +51,7 @@ export function DashboardShell({
           <GraduationCap className="size-5" />
         </div>
         <div className="leading-tight">
-          <p className="font-serif text-lg font-semibold text-sidebar-foreground">Θέσις</p>
+          <p className="font-serif text-lg font-semibold text-sidebar-foreground">Diploma</p>
           <p className="text-xs text-sidebar-foreground/60">Διαχείριση Διπλωματικών</p>
         </div>
       </div>

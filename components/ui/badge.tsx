@@ -3,7 +3,7 @@ import {
   STATUS_META,
   APPLICATION_STATUS_META,
   CHANGE_REQUEST_STATUS_META,
-  type ThesisStatus,
+  type DiplomaStatus,
   type ApplicationStatus,
   type ChangeRequestStatus,
 } from '@/lib/data'
@@ -45,7 +45,7 @@ function StatusPill({ label, className }: { label: string; className?: string })
   )
 }
 
-function StatusBadge({ status, className }: { status: ThesisStatus; className?: string }) {
+function StatusBadge({ status, className }: { status: DiplomaStatus; className?: string }) {
   const meta = STATUS_META[status]
   return <StatusPill label={meta.label} className={cn(meta.className, className)} />
 }

@@ -1,10 +1,10 @@
 import { PageHeader } from '@/components/ui/page'
-import { ThesesTable } from '@/components/secretary/theses-table'
+import { DiplomasTable } from '@/components/secretary/diplomas-table'
 import { TOPICS } from '@/lib/data'
 
-export default function SecretaryThesesPage() {
+export default function SecretaryDiplomasPage() {
   // Στη γραμματεία εμφανίζονται μόνο θέματα που έχουν ανατεθεί σε φοιτητή.
-  const theses = TOPICS.filter((t) => Boolean(t.student))
+  const diplomas = TOPICS.filter((t) => Boolean(t.student))
 
   return (
     <div className="space-y-6">
@@ -12,7 +12,7 @@ export default function SecretaryThesesPage() {
         title="Όλες οι διπλωματικές"
         description="Αναζήτηση και φιλτράρισμα όλων των διπλωματικών εργασιών του τμήματος."
       />
-      <ThesesTable topics={theses} />
+      <DiplomasTable topics={diplomas} />
     </div>
   )
 }

@@ -34,7 +34,7 @@ export default function StudentDashboard() {
   const record = studentByName(CURRENT_STUDENT)
   const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
 
-  const myThesis = TOPICS.find((t) => t.student === CURRENT_STUDENT)
+  const myDiploma = TOPICS.find((t) => t.student === CURRENT_STUDENT)
   const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
   const activeApplications = myApplications.filter((a) => a.status === 'pending')
   const available = TOPICS.filter((t) => t.status === 'available')
@@ -69,9 +69,9 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label="Κατάσταση διπλωματικής"
-          value={myThesis ? STATUS_META[myThesis.status].label : 'Χωρίς ανάθεση'}
+          value={myDiploma ? STATUS_META[myDiploma.status].label : 'Χωρίς ανάθεση'}
           icon={FileText}
-          hint={myThesis?.id}
+          hint={myDiploma?.id}
         />
         <StatCard
           label="Ενεργές δηλώσεις"
@@ -82,29 +82,29 @@ export default function StudentDashboard() {
         <StatCard label="Διαθέσιμα θέματα" value={available.length} icon={BookMarked} />
         <StatCard
           label="Προθεσμία υποβολής"
-          value={myThesis?.deadline ? formatDate(myThesis.deadline) : '—'}
+          value={myDiploma?.deadline ? formatDate(myDiploma.deadline) : '—'}
           icon={CalendarClock}
         />
       </div>
 
-      {myThesis ? (
+      {myDiploma ? (
         <Card>
           <CardHeader className="flex-row items-start justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground">{myThesis.id}</p>
-              <CardTitle className="mt-1">{myThesis.title}</CardTitle>
+              <p className="text-xs font-semibold text-muted-foreground">{myDiploma.id}</p>
+              <CardTitle className="mt-1">{myDiploma.title}</CardTitle>
             </div>
-            <StatusBadge status={myThesis.status} />
+            <StatusBadge status={myDiploma.status} />
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-sm text-muted-foreground text-pretty">{myThesis.summary}</p>
-            <WorkflowSteps current={myThesis.status} />
+            <p className="text-sm text-muted-foreground text-pretty">{myDiploma.summary}</p>
+            <WorkflowSteps current={myDiploma.status} />
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <div className="text-sm">
                 <span className="text-muted-foreground">Επιβλέπων: </span>
-                <span className="font-medium">{myThesis.professor}</span>
+                <span className="font-medium">{myDiploma.professor}</span>
               </div>
-              <Button variant="outline" render={<Link href="/student/thesis" />}>
+              <Button variant="outline" render={<Link href="/student/diploma" />}>
                 Προβολή διπλωματικής
                 <ArrowRight className="size-4" />
               </Button>

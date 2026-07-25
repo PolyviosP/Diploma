@@ -30,14 +30,14 @@ import {
   formatDate,
   studentByName,
   type Topic,
-  type ThesisStatus,
+  type DiplomaStatus,
 } from '@/lib/data'
 
 const COMMITTEE_SIZE = 3
 
 export function TopicManagement({ topic }: { topic: Topic }) {
   const { toast } = useToast()
-  const [status, setStatus] = useState<ThesisStatus>(topic.status)
+  const [status, setStatus] = useState<DiplomaStatus>(topic.status)
   const [assigned, setAssigned] = useState<string | undefined>(topic.student)
   const [committee, setCommittee] = useState<string[]>(topic.committee ?? [topic.professor])
   const [assignOpen, setAssignOpen] = useState(false)
