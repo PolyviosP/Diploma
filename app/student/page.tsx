@@ -4,22 +4,43 @@ import {
   Search,
   CalendarClock,
   ArrowRight,
-  Award,
   BookMarked,
+  Send,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page'
 import { StatCard } from '@/components/ui/stat-card'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge, StatusBadge } from '@/components/ui/badge'
+import { ApplicationBadge, StatusBadge } from '@/components/ui/badge'
+import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { TopicCard } from '@/components/topic-card'
-import { ROLE_META, TOPICS } from '@/lib/data'
+import { ChangeRequestCard } from '@/components/student/change-request-card'
+import {
+  APPLICATIONS,
+  CHANGE_REQUESTS,
+  CURRENT_STUDENT,
+  MAX_ACTIVE_APPLICATIONS,
+  ROLE_META,
+  STATUS_META,
+  TOPICS,
+  checkEligibility,
+  formatDate,
+  studentByName,
+} from '@/lib/data'
 
 export default function StudentDashboard() {
   const meta = ROLE_META.student
-  const myThesis = TOPICS.find((t) => t.student === meta.person)
-  const available = TOPICS.filter((t) => t.status === 'available').slice(0, 3)
+  const record = studentByName(CURRENT_STUDENT)
+  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+
+  const myThesis = TOPICS.find((t) => t.student === CURRENT_STUDENT)
+  const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
+  const activeApplications = myApplications.filter((a) => a.status === 'pending')
+  const available = TOPICS.filter((t) => t.status === 'available')
+  const pendingChangeRequest = CHANGE_REQUESTS.find(
+    (r) => r.student === CURRENT_STUDENT && r.status === 'pending_student',
+  )
 
   return (
     <div className="space-y-6">
@@ -33,11 +54,37 @@ export default function StudentDashboard() {
         </Button>
       </PageHeader>
 
+      {!eligibility.eligible ? (
+        <Notice variant="danger" title="Δεν πληροίς τις προϋποθέσεις ανάληψης διπλωματικής">
+          <ul className="list-inside list-disc space-y-0.5">
+            {eligibility.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </Notice>
+      ) : null}
+
+      {pendingChangeRequest ? <ChangeRequestCard request={pendingChangeRequest} /> : null}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Κατάσταση διπλωματικής" value="Ανατεθειμένη" icon={FileText} />
-        <StatCard label="Ενεργές δηλώσεις" value={1} icon={BookMarked} hint="1 σε αναμονή" />
-        <StatCard label="Διαθέσιμα θέματα" value={TOPICS.filter((t) => t.status === 'available').length} icon={Search} />
-        <StatCard label="Προθεσμία υποβολής" value="30 Ιουν" icon={CalendarClock} hint="2025" />
+        <StatCard
+          label="Κατάσταση διπλωματικής"
+          value={myThesis ? STATUS_META[myThesis.status].label : 'Χωρίς ανάθεση'}
+          icon={FileText}
+          hint={myThesis?.id}
+        />
+        <StatCard
+          label="Ενεργές δηλώσεις"
+          value={`${activeApplications.length}/${MAX_ACTIVE_APPLICATIONS}`}
+          icon={Send}
+          hint={`${myApplications.length} συνολικά`}
+        />
+        <StatCard label="Διαθέσιμα θέματα" value={available.length} icon={BookMarked} />
+        <StatCard
+          label="Προθεσμία υποβολής"
+          value={myThesis?.deadline ? formatDate(myThesis.deadline) : '—'}
+          icon={CalendarClock}
+        />
       </div>
 
       {myThesis ? (
@@ -66,6 +113,39 @@ export default function StudentDashboard() {
         </Card>
       ) : null}
 
+      {activeApplications.length > 0 ? (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Εκκρεμείς δηλώσεις</CardTitle>
+            <Button variant="ghost" size="sm" render={<Link href="/student/applications" />}>
+              Όλες
+              <ArrowRight className="size-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="divide-y divide-border">
+            {activeApplications.map((application) => (
+              <div
+                key={application.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <Link
+                    href={`/student/topics/${application.topicId}`}
+                    className="text-sm font-medium text-foreground hover:text-primary"
+                  >
+                    {application.topicTitle}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {application.professor} · Υποβλήθηκε {formatDate(application.submittedAt)}
+                  </p>
+                </div>
+                <ApplicationBadge status={application.status} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-serif text-lg font-semibold">Προτεινόμενα διαθέσιμα θέματα</h2>
@@ -78,28 +158,11 @@ export default function StudentDashboard() {
           </Link>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {available.map((t) => (
+          {available.slice(0, 3).map((t) => (
             <TopicCard key={t.id} topic={t} href={`/student/topics/${t.id}`} />
           ))}
         </div>
       </div>
-
-      <Card className="bg-primary/5">
-        <CardContent className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Award className="size-5" />
-            </div>
-            <div>
-              <p className="font-medium">Ολοκλήρωσε τη διπλωματική σου εγκαίρως</p>
-              <p className="text-sm text-muted-foreground">
-                Δες τις οδηγίες υποβολής και τα κριτήρια αξιολόγησης.
-              </p>
-            </div>
-          </div>
-          <Badge variant="default">Οδηγός φοιτητή</Badge>
-        </CardContent>
-      </Card>
     </div>
   )
 }

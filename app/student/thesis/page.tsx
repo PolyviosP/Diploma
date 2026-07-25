@@ -1,15 +1,28 @@
-import { FileText, Upload, Users, Star, MessageSquare } from 'lucide-react'
+import Link from 'next/link'
+import { FileText, Users, Search, MessageSquare } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/ui/page'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { StatusBadge, Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { FinalTextUpload } from '@/components/student/final-text-upload'
-import { ROLE_META, TOPICS } from '@/lib/data'
+import { ChangeRequestCard } from '@/components/student/change-request-card'
+import {
+  FinalGradeBlock,
+  GradeBreakdown,
+  GradeProgress,
+} from '@/components/grading/grade-summary'
+import {
+  ANNOTATIONS,
+  CHANGE_REQUESTS,
+  CURRENT_STUDENT,
+  TOPICS,
+  formatDate,
+} from '@/lib/data'
 
 export default function StudentThesisPage() {
-  const meta = ROLE_META.student
-  const thesis = TOPICS.find((t) => t.student === meta.person)
+  const thesis = TOPICS.find((t) => t.student === CURRENT_STUDENT)
 
   if (!thesis) {
     return (
@@ -18,11 +31,24 @@ export default function StudentThesisPage() {
         <EmptyState
           icon={FileText}
           title="Δεν υπάρχει ενεργή διπλωματική"
-          description="Δεν έχει ανατεθεί ακόμη διπλωματική εργασία στο προφίλ σου."
+          description="Δεν έχει ανατεθεί ακόμη διπλωματική εργασία στο προφίλ σου. Αναζήτησε διαθέσιμα θέματα και δήλωσε ενδιαφέρον."
+          action={
+            <Button render={<Link href="/student/topics" />}>
+              <Search className="size-4" />
+              Αναζήτηση θεμάτων
+            </Button>
+          }
         />
       </div>
     )
   }
+
+  const changeRequest = CHANGE_REQUESTS.find(
+    (r) => r.topicId === thesis.id && r.student === CURRENT_STUDENT,
+  )
+  const annotations = ANNOTATIONS.filter((a) => a.topicId === thesis.id)
+  // UC-13 — οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
+  const gradesVisible = thesis.status === 'completed'
 
   return (
     <div className="space-y-6">
@@ -30,13 +56,28 @@ export default function StudentThesisPage() {
         <StatusBadge status={thesis.status} />
       </PageHeader>
 
+      {changeRequest ? <ChangeRequestCard request={changeRequest} /> : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{thesis.title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{thesis.titleEn}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground text-pretty">{thesis.description}</p>
           <WorkflowSteps current={thesis.status} />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">Επιβλέπων: </span>
+              <span className="font-medium">{thesis.professor}</span>
+            </div>
+            {thesis.deadline ? (
+              <div>
+                <span className="text-muted-foreground">Προθεσμία: </span>
+                <span className="font-medium">{formatDate(thesis.deadline)}</span>
+              </div>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
 
@@ -48,15 +89,22 @@ export default function StudentThesisPage() {
             <CardTitle>Τριμελής επιτροπή</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {thesis.committee?.map((member, i) => (
-              <div key={member} className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <Avatar name={member} className="size-8" />
-                  <span className="text-sm">{member}</span>
+            {thesis.committee ? (
+              <>
+                {thesis.committee.map((member, i) => (
+                  <div key={member} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={member} className="size-8" />
+                      <span className="text-sm">{member}</span>
+                    </div>
+                    <Badge variant="muted">{i === 0 ? 'Επιβλέπων' : 'Μέλος'}</Badge>
+                  </div>
+                ))}
+                <div className="border-t border-border pt-3">
+                  <GradeProgress topicId={thesis.id} />
                 </div>
-                <Badge variant="muted">{i === 0 ? 'Επιβλέπων' : 'Μέλος'}</Badge>
-              </div>
-            )) ?? (
+              </>
+            ) : (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="size-4" /> Δεν έχει οριστεί επιτροπή.
               </div>
@@ -65,27 +113,45 @@ export default function StudentThesisPage() {
         </Card>
       </div>
 
+      {annotations.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Παρατηρήσεις επιτροπής</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {annotations.map((annotation) => (
+                <li key={annotation.id} className="flex gap-3 rounded-lg border border-border p-3">
+                  <span className="mt-0.5 flex h-6 shrink-0 items-center rounded-md bg-muted px-2 text-xs font-semibold text-muted-foreground">
+                    σελ. {annotation.page}
+                  </span>
+                  <div>
+                    <p className="text-sm text-foreground text-pretty">{annotation.text}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {annotation.professor} · {formatDate(annotation.createdAt)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Βαθμολογία</CardTitle>
         </CardHeader>
-        <CardContent>
-          {thesis.grade != null ? (
-            <div className="flex items-center gap-4">
-              <div className="flex size-16 items-center justify-center rounded-2xl bg-status-completed text-status-completed-foreground">
-                <span className="font-serif text-2xl font-bold">{thesis.grade.toFixed(1)}</span>
-              </div>
-              <div>
-                <p className="font-medium">Τελικός βαθμός</p>
-                <p className="text-sm text-muted-foreground">Η αξιολόγηση ολοκληρώθηκε.</p>
-              </div>
-            </div>
+        <CardContent className="space-y-5">
+          <FinalGradeBlock topic={thesis} />
+          {gradesVisible ? (
+            <GradeBreakdown topicId={thesis.id} />
           ) : (
-            <EmptyState
-              icon={Star}
-              title="Δεν υπάρχει βαθμολογία ακόμη"
-              description="Η βαθμολογία θα εμφανιστεί μετά την ολοκλήρωση της εξέτασης από την τριμελή επιτροπή."
-            />
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MessageSquare className="size-4 shrink-0" />
+              Οι επιμέρους βαθμοί και τα σχόλια της επιτροπής θα εμφανιστούν μετά την
+              οριστικοποίηση του τελικού βαθμού.
+            </p>
           )}
         </CardContent>
       </Card>

@@ -8,6 +8,10 @@ import {
   CheckCircle2,
   ClipboardList,
   GraduationCap,
+  ListChecks,
+  Languages,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,14 +21,19 @@ import { WorkflowSteps } from '@/components/workflow-steps'
 import { useToast } from '@/components/ui/toast'
 import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/input'
-import type { Topic, ThesisStatus } from '@/lib/data'
+import { Notice } from '@/components/ui/notice'
+import { GradeProgress } from '@/components/grading/grade-summary'
+import { DocumentCard } from '@/components/grading/document-card'
+import {
+  PROFESSORS,
+  checkEligibility,
+  formatDate,
+  studentByName,
+  type Topic,
+  type ThesisStatus,
+} from '@/lib/data'
 
-const COMMITTEE_POOL = [
-  'Δρ. Μαρία Κωνσταντίνου',
-  'Δρ. Νικόλαος Δήμου',
-  'Δρ. Ελευθερία Σπανού',
-  'Δρ. Παύλος Ρήγας',
-]
+const COMMITTEE_SIZE = 3
 
 export function TopicManagement({ topic }: { topic: Topic }) {
   const { toast } = useToast()
@@ -33,35 +42,59 @@ export function TopicManagement({ topic }: { topic: Topic }) {
   const [committee, setCommittee] = useState<string[]>(topic.committee ?? [topic.professor])
   const [assignOpen, setAssignOpen] = useState(false)
   const [committeeOpen, setCommitteeOpen] = useState(false)
+  const [profileOf, setProfileOf] = useState<string | null>(null)
   const [selectedApplicant, setSelectedApplicant] = useState<string>(
     topic.applicants?.[0]?.name ?? '',
   )
-  const [draftCommittee, setDraftCommittee] = useState<string[]>(committee)
+  const [draftCommittee, setDraftCommittee] = useState<string[]>(
+    (topic.committee ?? [topic.professor]).filter((m) => m !== topic.professor),
+  )
+
+  const pool = PROFESSORS.filter((p) => p.name !== topic.professor)
+  const profileRecord = profileOf ? studentByName(profileOf) : undefined
 
   function confirmAssign() {
     if (!selectedApplicant) return
+    // BR-3/BR-4 — το θέμα ανατίθεται σε έναν φοιτητή, οι υπόλοιπες δηλώσεις απορρίπτονται.
     setAssigned(selectedApplicant)
     setStatus('assigned')
     setAssignOpen(false)
+    const rejected = (topic.applicants?.length ?? 1) - 1
     toast({
       title: 'Ο φοιτητής ανατέθηκε',
-      description: `Το θέμα ανατέθηκε στον/στην ${selectedApplicant}.`,
+      description:
+        rejected > 0
+          ? `Το θέμα ανατέθηκε στον/στην ${selectedApplicant}. ${rejected} δηλώσεις απορρίφθηκαν αυτόματα.`
+          : `Το θέμα ανατέθηκε στον/στην ${selectedApplicant}.`,
       variant: 'success',
     })
   }
 
   function toggleMember(name: string) {
     setDraftCommittee((prev) =>
-      prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name],
+      prev.includes(name)
+        ? prev.filter((m) => m !== name)
+        : prev.length >= COMMITTEE_SIZE - 1
+          ? prev
+          : [...prev, name],
     )
   }
 
   function saveCommittee() {
-    setCommittee(draftCommittee)
+    // BR-5 — η τριμελής αποτελείται από 3 διδάσκοντες με τον επιβλέποντα υποχρεωτικό μέλος.
+    if (draftCommittee.length !== COMMITTEE_SIZE - 1) {
+      toast({
+        title: 'Απαιτούνται 2 επιπλέον μέλη',
+        description: 'Η τριμελής επιτροπή αποτελείται από 3 διδάσκοντες συνολικά (BR-5).',
+        variant: 'warning',
+      })
+      return
+    }
+    setCommittee([topic.professor, ...draftCommittee])
     setCommitteeOpen(false)
     toast({
       title: 'Η επιτροπή ορίστηκε',
-      description: `Ορίστηκαν ${draftCommittee.length} μέλη στην τριμελή επιτροπή.`,
+      description: 'Ορίστηκαν 3 μέλη στην τριμελή εξεταστική επιτροπή.',
       variant: 'success',
     })
   }
@@ -75,6 +108,8 @@ export function TopicManagement({ topic }: { topic: Topic }) {
     })
   }
 
+  const committeeComplete = committee.length === COMMITTEE_SIZE
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
@@ -83,11 +118,36 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <div>
               <p className="text-xs font-medium text-muted-foreground">{topic.id}</p>
               <CardTitle className="mt-1 text-xl">{topic.title}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">{topic.titleEn}</p>
             </div>
             <StatusBadge status={status} />
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm leading-relaxed text-muted-foreground">{topic.description}</p>
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Languages className="size-3.5" />
+                English description
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {topic.descriptionEn}
+              </p>
+            </div>
+            {topic.prerequisites.length > 0 ? (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Προαπαιτούμενα
+                </p>
+                <ul className="grid gap-1.5 sm:grid-cols-2">
+                  {topic.prerequisites.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-foreground">
+                      <ListChecks className="size-4 shrink-0 text-primary" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Badge variant="muted">{topic.area}</Badge>
               {topic.tags.map((tag) => (
@@ -116,21 +176,61 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {topic.applicants && topic.applicants.length > 0 ? (
-                topic.applicants.map((a) => (
-                  <div
-                    key={a.am}
-                    className="flex items-start gap-3 rounded-lg border border-border p-4"
-                  >
-                    <Avatar name={a.name} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-foreground">{a.name}</p>
-                        <span className="text-xs text-muted-foreground">ΑΜ {a.am}</span>
+                topic.applicants.map((applicant) => {
+                  const record = studentByName(applicant.name)
+                  const eligible = record ? checkEligibility(record).eligible : false
+                  return (
+                    <div
+                      key={applicant.am}
+                      className="flex items-start gap-3 rounded-lg border border-border p-4"
+                    >
+                      <Avatar name={applicant.name} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            {applicant.name}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              ΑΜ {applicant.am}
+                            </span>
+                            {record ? (
+                              <Badge
+                                className={
+                                  eligible
+                                    ? 'bg-status-completed text-status-completed-foreground'
+                                    : 'bg-status-rejected text-status-rejected-foreground'
+                                }
+                              >
+                                {eligible ? 'Δικαιούχος' : 'Δεν πληροί'}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground text-pretty">
+                          {applicant.note}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <span>Δήλωση: {formatDate(applicant.date)}</span>
+                          {record ? (
+                            <>
+                              <span>Μ.Ο. {record.gpa.toFixed(1)}</span>
+                              <span>{record.year}ο έτος</span>
+                              <button
+                                type="button"
+                                onClick={() => setProfileOf(applicant.name)}
+                                className="flex items-center gap-1 font-medium text-primary hover:underline"
+                              >
+                                <Eye className="size-3.5" />
+                                Προφίλ φοιτητή
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{a.note}</p>
                     </div>
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Δεν υπάρχουν δηλώσεις ενδιαφέροντος ακόμη.
@@ -139,6 +239,8 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             </CardContent>
           </Card>
         ) : null}
+
+        {status === 'review' || status === 'completed' ? <DocumentCard topic={topic} /> : null}
       </div>
 
       <div className="flex flex-col gap-6">
@@ -158,9 +260,9 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled={status === 'draft'}
+              disabled={status === 'draft' || status === 'available'}
               onClick={() => {
-                setDraftCommittee(committee)
+                setDraftCommittee(committee.filter((m) => m !== topic.professor))
                 setCommitteeOpen(true)
               }}
             >
@@ -170,12 +272,18 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled={status !== 'assigned'}
+              disabled={status !== 'assigned' || !committeeComplete}
               onClick={sendToReview}
             >
               <ClipboardList className="size-4" />
               Μετάβαση σε εξέταση
             </Button>
+            {status === 'assigned' && !committeeComplete ? (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Απαιτείται πλήρης τριμελής επιτροπή πριν τη μετάβαση σε εξέταση.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -193,13 +301,20 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             </div>
             <div className="flex items-start gap-3">
               <Users className="mt-0.5 size-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Τριμελής επιτροπή</p>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">
+                  Τριμελής επιτροπή ({committee.length}/{COMMITTEE_SIZE})
+                </p>
                 {committee.length > 0 ? (
                   <ul className="mt-0.5 space-y-0.5">
-                    {committee.map((m) => (
-                      <li key={m} className="font-medium text-foreground">
-                        {m}
+                    {committee.map((member, i) => (
+                      <li key={member} className="font-medium text-foreground">
+                        {member}
+                        {i === 0 ? (
+                          <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            (επιβλέπων)
+                          </span>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -213,8 +328,13 @@ export function TopicManagement({ topic }: { topic: Topic }) {
                 <Calendar className="size-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Προθεσμία</p>
-                  <p className="font-medium text-foreground">{topic.deadline}</p>
+                  <p className="font-medium text-foreground">{formatDate(topic.deadline)}</p>
                 </div>
+              </div>
+            ) : null}
+            {status === 'review' || status === 'completed' ? (
+              <div className="border-t border-border pt-3">
+                <GradeProgress topicId={topic.id} />
               </div>
             ) : null}
           </CardContent>
@@ -238,25 +358,35 @@ export function TopicManagement({ topic }: { topic: Topic }) {
           </>
         }
       >
-        <div className="flex flex-col gap-2">
-          {(topic.applicants ?? []).map((a) => (
-            <label
-              key={a.am}
-              className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5"
-            >
-              <input
-                type="radio"
-                name="applicant"
-                className="accent-primary"
-                checked={selectedApplicant === a.name}
-                onChange={() => setSelectedApplicant(a.name)}
-              />
-              <div>
-                <p className="text-sm font-medium text-foreground">{a.name}</p>
-                <p className="text-xs text-muted-foreground">ΑΜ {a.am}</p>
-              </div>
-            </label>
-          ))}
+        <div className="flex flex-col gap-3">
+          <Notice variant="warning" title="Αυτόματη απόρριψη λοιπών δηλώσεων">
+            Με την επιλογή φοιτητή, οι υπόλοιπες δηλώσεις ενδιαφέροντος για το θέμα απορρίπτονται
+            αυτόματα (BR-4).
+          </Notice>
+          {(topic.applicants ?? []).map((applicant) => {
+            const record = studentByName(applicant.name)
+            return (
+              <label
+                key={applicant.am}
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5"
+              >
+                <input
+                  type="radio"
+                  name="applicant"
+                  className="accent-primary"
+                  checked={selectedApplicant === applicant.name}
+                  onChange={() => setSelectedApplicant(applicant.name)}
+                />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{applicant.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ΑΜ {applicant.am}
+                    {record ? ` · Μ.Ο. ${record.gpa.toFixed(1)} · ${record.year}ο έτος` : ''}
+                  </p>
+                </div>
+              </label>
+            )
+          })}
           {(topic.applicants ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">Δεν υπάρχουν διαθέσιμοι υποψήφιοι.</p>
           ) : null}
@@ -267,7 +397,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
         open={committeeOpen}
         onClose={() => setCommitteeOpen(false)}
         title="Ορισμός τριμελούς επιτροπής"
-        description="Επιλέξτε τα μέλη της επιτροπής. Εσείς συμμετέχετε ως επιβλέπων."
+        description="Επιλέξτε 2 επιπλέον μέλη. Εσείς συμμετέχετε υποχρεωτικά ως επιβλέπων (BR-5)."
         footer={
           <>
             <Button variant="ghost" onClick={() => setCommitteeOpen(false)}>
@@ -285,23 +415,90 @@ export function TopicManagement({ topic }: { topic: Topic }) {
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm font-medium text-foreground">
             {topic.professor}
           </div>
-          <Label className="mb-0 mt-2">Μέλη επιτροπής</Label>
-          {COMMITTEE_POOL.map((name) => (
-            <label
-              key={name}
-              className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5"
-            >
-              <input
-                type="checkbox"
-                className="accent-primary"
-                checked={draftCommittee.includes(name)}
-                onChange={() => toggleMember(name)}
-              />
-              <span className="text-sm font-medium text-foreground">{name}</span>
-            </label>
-          ))}
+          <Label className="mb-0 mt-2">
+            Μέλη επιτροπής ({draftCommittee.length}/{COMMITTEE_SIZE - 1})
+          </Label>
+          {pool.map((member) => {
+            const checked = draftCommittee.includes(member.name)
+            const full = draftCommittee.length >= COMMITTEE_SIZE - 1
+            return (
+              <label
+                key={member.name}
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+              >
+                <input
+                  type="checkbox"
+                  className="accent-primary"
+                  checked={checked}
+                  disabled={!checked && full}
+                  onChange={() => toggleMember(member.name)}
+                />
+                <span>
+                  <span className="block text-sm font-medium text-foreground">{member.name}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {member.rank} · {member.area}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
         </div>
       </Dialog>
+
+      <Dialog
+        open={profileOf !== null}
+        onClose={() => setProfileOf(null)}
+        title="Προφίλ φοιτητή"
+        description={profileOf ?? undefined}
+        className="max-w-md"
+      >
+        {profileRecord ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={profileRecord.name} className="size-12 text-base" />
+              <div>
+                <p className="font-medium text-foreground">{profileRecord.name}</p>
+                <p className="text-sm text-muted-foreground">{profileRecord.email}</p>
+              </div>
+            </div>
+            <dl className="grid grid-cols-2 gap-3">
+              <Field label="Αριθμός μητρώου" value={profileRecord.am} />
+              <Field label="Έτος / Εξάμηνο" value={`${profileRecord.year}ο / ${profileRecord.semester}ο`} />
+              <Field label="Οφειλόμενα μαθήματα" value={profileRecord.owedCourses} />
+              <Field label="ECTS" value={profileRecord.credits} />
+              <Field label="Μέσος όρος" value={profileRecord.gpa.toFixed(1)} />
+              <Field
+                label="Αναλυτική βαθμολογία"
+                value={
+                  profileRecord.transcript
+                    ? formatDate(profileRecord.transcript.uploadedAt)
+                    : 'Δεν αναρτήθηκε'
+                }
+              />
+            </dl>
+            {checkEligibility(profileRecord).eligible ? (
+              <Notice variant="success" title="Πληροί τις προϋποθέσεις ανάληψης διπλωματικής" />
+            ) : (
+              <Notice variant="danger" title="Δεν πληροί τις προϋποθέσεις">
+                <ul className="list-inside list-disc">
+                  {checkEligibility(profileRecord).reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </Notice>
+            )}
+          </div>
+        ) : null}
+      </Dialog>
+    </div>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg bg-muted/50 p-3">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm font-medium text-foreground">{value}</dd>
     </div>
   )
 }

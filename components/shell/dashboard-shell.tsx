@@ -33,8 +33,16 @@ export function DashboardShell({
   const meta = ROLE_META[role]
   const unread = NOTIFICATIONS.filter((n) => n.unread).length
 
-  const isActive = (href: string) =>
-    href === `/${role}` ? pathname === href : pathname.startsWith(href)
+  // Ενεργό θεωρείται το πιο εξειδικευμένο link που ταιριάζει, ώστε το
+  // /professor/topics/new να μην φωτίζει και το /professor/topics.
+  const activeHref = nav
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .reduce<string | null>(
+      (best, item) => (best && best.length >= item.href.length ? best : item.href),
+      null,
+    )
+
+  const isActive = (href: string) => href === activeHref
 
   const SidebarContent = (
     <div className="flex h-full flex-col">

@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils'
-import { STATUS_META, type ThesisStatus } from '@/lib/data'
+import {
+  STATUS_META,
+  APPLICATION_STATUS_META,
+  CHANGE_REQUEST_STATUS_META,
+  type ThesisStatus,
+  type ApplicationStatus,
+  type ChangeRequestStatus,
+} from '@/lib/data'
 
 function Badge({
   className,
@@ -23,20 +30,46 @@ function Badge({
   )
 }
 
-function StatusBadge({ status, className }: { status: ThesisStatus; className?: string }) {
-  const meta = STATUS_META[status]
+/** Γενικό pill κατάστασης — τα labels/χρώματα έρχονται από το lib/data. */
+function StatusPill({ label, className }: { label: string; className?: string }) {
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide',
-        meta.className,
         className,
       )}
     >
       <span className="size-1.5 rounded-full bg-current opacity-70" aria-hidden />
-      {meta.label}
+      {label}
     </span>
   )
 }
 
-export { Badge, StatusBadge }
+function StatusBadge({ status, className }: { status: ThesisStatus; className?: string }) {
+  const meta = STATUS_META[status]
+  return <StatusPill label={meta.label} className={cn(meta.className, className)} />
+}
+
+function ApplicationBadge({
+  status,
+  className,
+}: {
+  status: ApplicationStatus
+  className?: string
+}) {
+  const meta = APPLICATION_STATUS_META[status]
+  return <StatusPill label={meta.label} className={cn(meta.className, className)} />
+}
+
+function ChangeRequestBadge({
+  status,
+  className,
+}: {
+  status: ChangeRequestStatus
+  className?: string
+}) {
+  const meta = CHANGE_REQUEST_STATUS_META[status]
+  return <StatusPill label={meta.label} className={cn(meta.className, className)} />
+}
+
+export { Badge, StatusPill, StatusBadge, ApplicationBadge, ChangeRequestBadge }

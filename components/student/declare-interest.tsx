@@ -1,17 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, CheckCircle2 } from 'lucide-react'
+import { Send, CheckCircle2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Label, Textarea } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
+import { MAX_ACTIVE_APPLICATIONS } from '@/lib/data'
 
-export function DeclareInterest({ topicTitle }: { topicTitle: string }) {
+export type DeclareBlock = { blocked: true; title: string; detail: string } | { blocked: false }
+
+/**
+ * UC-04 — Δήλωση ενδιαφέροντος.
+ * Ελέγχονται οι προϋποθέσεις του οδηγού σπουδών καθώς και οι BR-1/BR-2
+ * πριν επιτραπεί η υποβολή.
+ */
+export function DeclareInterest({
+  topicTitle,
+  block = { blocked: false },
+  activeApplications = 0,
+  alreadyApplied = false,
+}: {
+  topicTitle: string
+  block?: DeclareBlock
+  activeApplications?: number
+  alreadyApplied?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [declared, setDeclared] = useState(false)
+  const [declared, setDeclared] = useState(alreadyApplied)
   const { toast } = useToast()
 
   const submit = () => {
@@ -35,6 +53,15 @@ export function DeclareInterest({ topicTitle }: { topicTitle: string }) {
       <Button variant="secondary" disabled>
         <CheckCircle2 className="size-4" />
         Δηλώθηκε ενδιαφέρον
+      </Button>
+    )
+  }
+
+  if (block.blocked) {
+    return (
+      <Button variant="secondary" disabled title={block.detail}>
+        <Lock className="size-4" />
+        {block.title}
       </Button>
     )
   }
@@ -70,7 +97,8 @@ export function DeclareInterest({ topicTitle }: { topicTitle: string }) {
             placeholder="Ανέφερε σχετικά μαθήματα, δεξιότητες ή κίνητρο..."
           />
           <p className="mt-2 text-xs text-muted-foreground">
-            Η δήλωση θα σταλεί στον επιβλέποντα καθηγητή για έγκριση.
+            Η δήλωση θα σταλεί στον επιβλέποντα καθηγητή για έγκριση. Ενεργές δηλώσεις:{' '}
+            {activeApplications}/{MAX_ACTIVE_APPLICATIONS}.
           </p>
         </div>
       </Dialog>
