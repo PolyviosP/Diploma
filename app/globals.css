@@ -76,7 +76,7 @@
   --card-foreground: oklch(0.3 0.01 90);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.3 0.01 90);
-  --primary: oklch(0.79 0.14 220); /* Cyan-400 */
+  --primary: oklch(0.79 0.15 212); /* Cyan-400 (#22d3ee) — accent όλης της εφαρμογής */
   --primary-foreground: oklch(0.2 0.01 90); /* Dark text for contrast */
   --secondary: oklch(0.96 0.005 90);
   --secondary-foreground: oklch(0.3 0.01 90);
@@ -87,7 +87,7 @@
   --destructive: oklch(0.6 0.15 25);
   --border: oklch(0.93 0.005 90);
   --input: oklch(0.93 0.005 90);
-  --ring: oklch(0.79 0.14 220); /* Cyan-400 */
+  --ring: oklch(0.79 0.15 212); /* Cyan-400 */
   --chart-1: oklch(0.42 0.11 258);
   --chart-2: oklch(0.62 0.13 200);
   --chart-3: oklch(0.7 0.14 85);
@@ -108,15 +108,15 @@
   --status-rejected: oklch(0.95 0.035 25);
   --status-rejected-foreground: oklch(0.48 0.15 25);
 
-  /* Το sidebar μένει τελείως ουδέτερο — χωρίς accent χρώμα. */
-  --sidebar: oklch(0.98 0.002 90);
+  /* Sidebar στο ίδιο cyan accent με τα κουμπιά. */
+  --sidebar: oklch(0.985 0.006 212);
   --sidebar-foreground: oklch(0.3 0.01 90);
-  --sidebar-primary: oklch(0.3 0.01 90);
-  --sidebar-primary-foreground: oklch(0.98 0.002 90);
-  --sidebar-accent: oklch(0.93 0.005 90);
-  --sidebar-accent-foreground: oklch(0.3 0.01 90);
-  --sidebar-border: oklch(0.93 0.005 90);
-  --sidebar-ring: oklch(0.6 0.01 90);
+  --sidebar-primary: oklch(0.79 0.15 212);
+  --sidebar-primary-foreground: oklch(0.2 0.01 90);
+  --sidebar-accent: oklch(0.94 0.045 212);
+  --sidebar-accent-foreground: oklch(0.38 0.09 215);
+  --sidebar-border: oklch(0.92 0.015 212);
+  --sidebar-ring: oklch(0.79 0.15 212);
 }
 
 .dark {
