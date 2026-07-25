@@ -5,10 +5,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Μόνο Google Fonts — τα generic families μένουν ως έσχατο fallback. */
+  /* Μία Google Font (Inter) παντού — σώμα κειμένου, τίτλοι, τα πάντα.
+     Το `font-serif` παραμένει ως utility για τους τίτλους αλλά δείχνει
+     στην ίδια οικογένεια, ώστε να μη χρειαστεί αλλαγή σε ~20 components. */
   --font-sans: var(--font-inter), sans-serif;
-  --font-serif: var(--font-source-serif), serif;
+  --font-serif: var(--font-inter), sans-serif;
   --font-mono: var(--font-inter), monospace;
+  /* Αντικαθιστά και το system stack που βάζει το Tailwind preflight στο <html>. */
+  --default-font-family: var(--font-inter), sans-serif;
+  --default-mono-font-family: var(--font-inter), monospace;
 
   --color-status-draft: var(--status-draft);
   --color-status-draft-foreground: var(--status-draft-foreground);
@@ -88,7 +93,7 @@
   --chart-3: oklch(0.7 0.14 85);
   --chart-4: oklch(0.6 0.15 150);
   --chart-5: oklch(0.55 0.16 25);
-  --radius: 0.3rem;
+  --radius: 0.75rem;
 
   --status-draft: oklch(0.96 0.005 90);
   --status-draft-foreground: oklch(0.58 0.01 90);
@@ -103,14 +108,15 @@
   --status-rejected: oklch(0.95 0.035 25);
   --status-rejected-foreground: oklch(0.48 0.15 25);
 
+  /* Το sidebar μένει τελείως ουδέτερο — χωρίς accent χρώμα. */
   --sidebar: oklch(0.98 0.002 90);
   --sidebar-foreground: oklch(0.3 0.01 90);
-  --sidebar-primary: oklch(0.79 0.14 220); /* Cyan-400 */
-  --sidebar-primary-foreground: oklch(0.2 0.01 90);
+  --sidebar-primary: oklch(0.3 0.01 90);
+  --sidebar-primary-foreground: oklch(0.98 0.002 90);
   --sidebar-accent: oklch(0.93 0.005 90);
   --sidebar-accent-foreground: oklch(0.3 0.01 90);
   --sidebar-border: oklch(0.93 0.005 90);
-  --sidebar-ring: oklch(0.79 0.14 220);
+  --sidebar-ring: oklch(0.6 0.01 90);
 }
 
 .dark {
@@ -140,8 +146,8 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -176,8 +182,8 @@
     --chart-5: oklch(0.269 0 0);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.985 0 0);
+    --sidebar-primary-foreground: oklch(0.205 0 0);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);

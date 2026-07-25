@@ -1,3 +1,4 @@
+import { isValidElement } from 'react'
 import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { cva, type VariantProps } from 'class-variance-authority'
 
@@ -44,11 +45,21 @@ function Button({
   className,
   variant = 'default',
   size = 'default',
+  render,
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // Το Base UI προειδοποιεί όταν το `nativeButton` είναι true αλλά το στοιχείο
+  // δεν είναι πραγματικό <button> (π.χ. render={<Link />}). Το ανιχνεύουμε εδώ
+  // ώστε τα link-buttons να κρατούν σωστά semantics χωρίς ρύθμιση σε κάθε χρήση.
+  const rendersNativeButton =
+    render === undefined || (isValidElement(render) && render.type === 'button')
+
   return (
     <ButtonPrimitive
       data-slot="button"
+      render={render}
+      nativeButton={nativeButton ?? rendersNativeButton}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
