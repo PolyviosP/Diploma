@@ -108,8 +108,8 @@
   --status-rejected: oklch(0.95 0.035 25);
   --status-rejected-foreground: oklch(0.48 0.15 25);
 
-  /* Sidebar στο ίδιο cyan accent με τα κουμπιά. */
-  --sidebar: oklch(0.985 0.006 212);
+  /* Ουδέτερο background, cyan accent στα υπόλοιπα στοιχεία του sidebar. */
+  --sidebar: oklch(0.98 0.002 90);
   --sidebar-foreground: oklch(0.3 0.01 90);
   --sidebar-primary: oklch(0.79 0.15 212);
   --sidebar-primary-foreground: oklch(0.2 0.01 90);
