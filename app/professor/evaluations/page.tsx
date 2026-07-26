@@ -1,28 +1,33 @@
 import Link from 'next/link'
-import { ClipboardCheck, ArrowRight, FileText, CalendarClock } from 'lucide-react'
+import { ClipboardCheck, ArrowRight, FileText, CalendarClock, CheckCircle2 } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/ui/page'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { GradeProgress } from '@/components/grading/grade-summary'
-import { CURRENT_COMMITTEE_MEMBER, GRADES, TOPICS, formatDate } from '@/lib/data'
+import { CURRENT_PROFESSOR, GRADES, TOPICS, formatDate } from '@/lib/data'
 
-export default function CommitteeEvaluationsPage() {
+export default function ProfessorEvaluationsPage() {
   const gradedIds = new Set(
-    GRADES.filter((g) => g.professor === CURRENT_COMMITTEE_MEMBER).map((g) => g.topicId),
+    GRADES.filter((g) => g.professor === CURRENT_PROFESSOR).map((g) => g.topicId),
   )
 
   const diplomas = TOPICS.filter(
-    (t) => t.committee?.includes(CURRENT_COMMITTEE_MEMBER) && t.status === 'review',
+    (t) => t.committee?.includes(CURRENT_PROFESSOR) && t.status === 'review',
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Προς αξιολόγηση"
-        description="Διπλωματικές εργασίες υπό εξέταση για τις οποίες συμμετέχετε στην τριμελή επιτροπή."
-      />
+        title="Αξιολογήσεις"
+        description="Διπλωματικές υπό εξέταση για τις οποίες συμμετέχετε στην τριμελή επιτροπή."
+      >
+        <Button variant="outline" render={<Link href="/professor/evaluations/completed" />}>
+          <CheckCircle2 className="size-4" />
+          Ολοκληρωμένες
+        </Button>
+      </PageHeader>
 
       {diplomas.length === 0 ? (
         <EmptyState
@@ -83,9 +88,15 @@ export default function CommitteeEvaluationsPage() {
                       <CalendarClock className="size-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Προθεσμία</p>
-                      <p className="text-sm font-medium text-foreground">
-                        {topic.deadline ? formatDate(topic.deadline) : '—'}
+                      <p className="text-xs text-muted-foreground">Παρουσίαση</p>
+                      <p
+                        className={
+                          topic.presentedAt
+                            ? 'text-sm font-medium text-foreground'
+                            : 'text-sm font-medium text-status-assigned-foreground'
+                        }
+                      >
+                        {topic.presentedAt ? formatDate(topic.presentedAt) : 'Εκκρεμεί'}
                       </p>
                     </div>
                   </div>
@@ -96,7 +107,7 @@ export default function CommitteeEvaluationsPage() {
                   <Button
                     variant={graded ? 'outline' : 'default'}
                     size="sm"
-                    render={<Link href={`/committee/evaluations/${topic.id}`} />}
+                    render={<Link href={`/professor/evaluations/${topic.id}`} />}
                   >
                     {graded ? 'Προβολή / τροποποίηση' : 'Αξιολόγηση'}
                     <ArrowRight className="size-3.5" />

@@ -12,6 +12,7 @@ import {
   Languages,
   Eye,
   AlertTriangle,
+  Presentation,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,7 @@ import { StatusBadge, Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { useToast } from '@/components/ui/toast'
-import { Dialog } from '@/components/ui/dialog'
+import { Dialog, ConfirmDialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/input'
 import { Notice } from '@/components/ui/notice'
 import { GradeProgress } from '@/components/grading/grade-summary'
@@ -43,6 +44,8 @@ export function TopicManagement({ topic }: { topic: Topic }) {
   const [assignOpen, setAssignOpen] = useState(false)
   const [committeeOpen, setCommitteeOpen] = useState(false)
   const [profileOf, setProfileOf] = useState<string | null>(null)
+  const [presentedAt, setPresentedAt] = useState<string | undefined>(topic.presentedAt)
+  const [presentationOpen, setPresentationOpen] = useState(false)
   const [selectedApplicant, setSelectedApplicant] = useState<string>(
     topic.applicants?.[0]?.name ?? '',
   )
@@ -95,6 +98,17 @@ export function TopicManagement({ topic }: { topic: Topic }) {
     toast({
       title: 'Η επιτροπή ορίστηκε',
       description: 'Ορίστηκαν 3 μέλη στην τριμελή εξεταστική επιτροπή.',
+      variant: 'success',
+    })
+  }
+
+  // BR-6 — η βαθμολόγηση ξεκλειδώνει μόνο αφού δηλωθεί η παρουσίαση.
+  function confirmPresentation() {
+    setPresentedAt(new Date().toISOString().slice(0, 10))
+    setPresentationOpen(false)
+    toast({
+      title: 'Η παρουσίαση καταχωρήθηκε',
+      description: 'Τα μέλη της τριμελούς μπορούν πλέον να βαθμολογήσουν.',
       variant: 'success',
     })
   }
@@ -284,6 +298,22 @@ export function TopicManagement({ topic }: { topic: Topic }) {
                 Απαιτείται πλήρης τριμελής επιτροπή πριν τη μετάβαση σε εξέταση.
               </p>
             ) : null}
+
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              disabled={status !== 'review' || !topic.document || Boolean(presentedAt)}
+              onClick={() => setPresentationOpen(true)}
+            >
+              <Presentation className="size-4" />
+              {presentedAt ? 'Η παρουσίαση δηλώθηκε' : 'Δήλωση παρουσίασης'}
+            </Button>
+            {status === 'review' && !topic.document ? (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Ο φοιτητής δεν έχει υποβάλει ακόμη το τελικό κείμενο.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -333,9 +363,20 @@ export function TopicManagement({ topic }: { topic: Topic }) {
               </div>
             ) : null}
             {status === 'review' || status === 'completed' ? (
-              <div className="border-t border-border pt-3">
-                <GradeProgress topicId={topic.id} />
-              </div>
+              <>
+                <div className="flex items-center gap-3">
+                  <Presentation className="size-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Παρουσίαση</p>
+                    <p className="font-medium text-foreground">
+                      {presentedAt ? formatDate(presentedAt) : 'Εκκρεμεί'}
+                    </p>
+                  </div>
+                </div>
+                <div className="border-t border-border pt-3">
+                  <GradeProgress topicId={topic.id} />
+                </div>
+              </>
             ) : null}
           </CardContent>
         </Card>
@@ -444,6 +485,15 @@ export function TopicManagement({ topic }: { topic: Topic }) {
           })}
         </div>
       </Dialog>
+
+      <ConfirmDialog
+        open={presentationOpen}
+        onClose={() => setPresentationOpen(false)}
+        onConfirm={confirmPresentation}
+        title="Δήλωση παρουσίασης"
+        description="Επιβεβαιώνετε ότι η παρουσίαση της διπλωματικής πραγματοποιήθηκε; Με τη δήλωση ξεκλειδώνει η βαθμολόγηση για όλα τα μέλη της τριμελούς (BR-6)."
+        confirmLabel="Καταχώρηση"
+      />
 
       <Dialog
         open={profileOf !== null}

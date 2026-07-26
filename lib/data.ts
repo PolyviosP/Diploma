@@ -115,7 +115,12 @@ export const CHANGE_REQUEST_STATUS_META: Record<
 /*  Ρόλοι                                                                       */
 /* -------------------------------------------------------------------------- */
 
-export type Role = 'student' | 'professor' | 'committee' | 'secretary'
+/**
+ * Οι ρόλοι αυθεντικοποίησης. Η «τριμελής επιτροπή» ΔΕΝ είναι ρόλος: ένα μέλος
+ * επιτροπής είναι διδάσκων, και η ιδιότητα προκύπτει ανά διπλωματική από το
+ * πεδίο `committee` του θέματος — όχι από τον λογαριασμό.
+ */
+export type Role = 'student' | 'professor' | 'secretary'
 
 export const ROLE_META: Record<
   Role,
@@ -129,15 +134,10 @@ export const ROLE_META: Record<
   },
   professor: {
     label: 'Διδάσκων',
-    description: 'Δημιουργία θεμάτων, ανάθεση φοιτητών και ορισμός τριμελών επιτροπών.',
+    description:
+      'Δημιουργία θεμάτων, ανάθεση φοιτητών, ορισμός τριμελών επιτροπών και βαθμολόγηση ως μέλος επιτροπής.',
     person: 'Δρ. Γεώργιος Αντωνίου',
     detail: 'Αναπληρωτής Καθηγητής · Τμήμα Πληροφορικής',
-  },
-  committee: {
-    label: 'Τριμελής Επιτροπή',
-    description: 'Αξιολόγηση και βαθμολόγηση διπλωματικών εργασιών υπό εξέταση.',
-    person: 'Δρ. Μαρία Κωνσταντίνου',
-    detail: 'Μέλος επιτροπής · Τμήμα Πληροφορικής',
   },
   secretary: {
     label: 'Γραμματεία',
@@ -150,7 +150,6 @@ export const ROLE_META: Record<
 /** Τρέχουσες περσόνες του πρωτοτύπου (θα προέρχονται από το SSO). */
 export const CURRENT_STUDENT = ROLE_META.student.person
 export const CURRENT_PROFESSOR = ROLE_META.professor.person
-export const CURRENT_COMMITTEE_MEMBER = ROLE_META.committee.person
 
 /* -------------------------------------------------------------------------- */
 /*  Διδάσκοντες                                                                 */
@@ -220,6 +219,8 @@ export type Topic = {
   grade?: number | null
   deadline?: string
   document?: { name: string; size: string; submittedAt: string }
+  /** Ημερομηνία παρουσίασης — απαιτείται από BR-6 πριν τη βαθμολόγηση. */
+  presentedAt?: string
 }
 
 export const AREAS = [
@@ -358,6 +359,7 @@ export const TOPICS: Topic[] = [
       size: '8.4 MB',
       submittedAt: '2025-02-20',
     },
+    presentedAt: '2025-02-22',
   },
   {
     id: 'THE-2406',
@@ -384,6 +386,7 @@ export const TOPICS: Topic[] = [
       size: '5.1 MB',
       submittedAt: '2024-09-12',
     },
+    presentedAt: '2024-09-22',
   },
   {
     id: 'THE-2407',
@@ -595,16 +598,7 @@ export const GRADES: Grade[] = [
     comments: 'Άρτια παρουσίαση και τεκμηρίωση των αποτελεσμάτων.',
     createdAt: '2024-09-27',
   },
-  {
-    id: 'GRD-511',
-    topicId: 'THE-2408',
-    professor: 'Δρ. Μαρία Κωνσταντίνου',
-    role: 'member',
-    criteria: { content: 8.5, methodology: 8.5, writing: 8, presentation: 9 },
-    score: 8.5,
-    comments: 'Καλή προσομοίωση, χρειάζεται όμως ισχυρότερη στατιστική τεκμηρίωση.',
-    createdAt: '2025-02-08',
-  },
+  // Το THE-2408 δεν έχει ακόμη βαθμούς: εκκρεμεί η παρουσίαση (BR-6).
   {
     id: 'GRD-512',
     topicId: 'THE-2405',

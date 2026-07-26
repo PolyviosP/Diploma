@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Users, Tag, CalendarClock, GraduationCap } from 'lucide-react'
+import { ArrowLeft, Tag, CalendarClock, GraduationCap, Presentation } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge, StatusBadge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ import {
 } from '@/components/grading/grade-summary'
 import {
   ANNOTATIONS,
-  CURRENT_COMMITTEE_MEMBER,
+  CURRENT_PROFESSOR,
   GRADES,
   TOPICS,
   formatDate,
@@ -28,21 +28,24 @@ export default async function CommitteeEvaluationPage({
 }) {
   const { id } = await params
   const topic = TOPICS.find((t) => t.id === id)
-  if (!topic || !topic.committee?.includes(CURRENT_COMMITTEE_MEMBER)) notFound()
+  if (!topic || !topic.committee?.includes(CURRENT_PROFESSOR)) notFound()
 
   const myGrade = GRADES.find(
-    (g) => g.topicId === topic.id && g.professor === CURRENT_COMMITTEE_MEMBER,
+    (g) => g.topicId === topic.id && g.professor === CURRENT_PROFESSOR,
   )
-  // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου.
-  const canGrade = Boolean(topic.document) && topic.status !== 'completed'
+  // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
+  const canGrade =
+    Boolean(topic.document) && Boolean(topic.presentedAt) && topic.status !== 'completed'
   const blockedReason = !topic.document
     ? 'Δεν έχει υποβληθεί ακόμη το τελικό κείμενο της διπλωματικής (BR-6).'
-    : 'Η διπλωματική έχει ολοκληρωθεί και η βαθμολογία έχει οριστικοποιηθεί.'
+    : !topic.presentedAt
+      ? 'Εκκρεμεί η παρουσίαση της διπλωματικής. Ο επιβλέπων πρέπει πρώτα να τη δηλώσει (BR-6).'
+      : 'Η διπλωματική έχει ολοκληρωθεί και η βαθμολογία έχει οριστικοποιηθεί.'
 
   return (
     <div className="space-y-6">
       <Link
-        href="/committee/evaluations"
+        href="/professor/evaluations"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
@@ -83,7 +86,7 @@ export default async function CommitteeEvaluationPage({
 
           <AnnotationsPanel
             annotations={ANNOTATIONS.filter((a) => a.topicId === topic.id)}
-            author={CURRENT_COMMITTEE_MEMBER}
+            author={CURRENT_PROFESSOR}
             readOnly={topic.status === 'completed'}
           />
         </div>
@@ -122,6 +125,23 @@ export default async function CommitteeEvaluationPage({
                   </div>
                 </div>
               ) : null}
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Presentation className="size-4" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Παρουσίαση</p>
+                  <p
+                    className={
+                      topic.presentedAt
+                        ? 'font-medium'
+                        : 'font-medium text-status-assigned-foreground'
+                    }
+                  >
+                    {topic.presentedAt ? formatDate(topic.presentedAt) : 'Εκκρεμεί'}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -136,7 +156,7 @@ export default async function CommitteeEvaluationPage({
                     <Avatar name={member} className="size-8" />
                     <span className="truncate text-sm">
                       {member}
-                      {member === CURRENT_COMMITTEE_MEMBER ? (
+                      {member === CURRENT_PROFESSOR ? (
                         <span className="ml-1 text-xs text-primary">(εσείς)</span>
                       ) : null}
                     </span>

@@ -12,7 +12,6 @@ import {
   Users,
   FileEdit,
   UserCheck,
-  CheckCircle2,
   type LucideIcon,
 } from 'lucide-react'
 import type { Role } from '@/lib/data'
@@ -36,12 +35,9 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { label: 'Τα θέματά μου', href: '/professor/topics', icon: FolderKanban },
     { label: 'Νέο θέμα', href: '/professor/topics/new', icon: PlusCircle },
     { label: 'Επιβλέψεις', href: '/professor/diplomas', icon: Users },
+    // Ως μέλος τριμελούς — δεν είναι ξεχωριστός ρόλος, ίδιος λογαριασμός.
+    { label: 'Αξιολογήσεις', href: '/professor/evaluations', icon: ClipboardCheck },
     { label: 'Τροποποιήσεις θεμάτων', href: '/professor/requests', icon: FileEdit },
-  ],
-  committee: [
-    { label: 'Επισκόπηση', href: '/committee', icon: LayoutDashboard },
-    { label: 'Προς αξιολόγηση', href: '/committee/evaluations', icon: ClipboardCheck },
-    { label: 'Ολοκληρωμένες', href: '/committee/completed', icon: CheckCircle2 },
   ],
   secretary: [
     { label: 'Επισκόπηση', href: '/secretary', icon: LayoutDashboard },

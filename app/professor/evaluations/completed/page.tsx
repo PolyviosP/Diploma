@@ -1,18 +1,26 @@
 import Link from 'next/link'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, ArrowLeft } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/ui/page'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { FinalGradeBlock, GradeBreakdown } from '@/components/grading/grade-summary'
-import { CURRENT_COMMITTEE_MEMBER, TOPICS, formatDate } from '@/lib/data'
+import { CURRENT_PROFESSOR, TOPICS, formatDate } from '@/lib/data'
 
-export default function CommitteeCompletedPage() {
+export default function CompletedEvaluationsPage() {
   const diplomas = TOPICS.filter(
-    (t) => t.committee?.includes(CURRENT_COMMITTEE_MEMBER) && t.status === 'completed',
+    (t) => t.committee?.includes(CURRENT_PROFESSOR) && t.status === 'completed',
   )
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/professor/evaluations"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        Πίσω στις αξιολογήσεις
+      </Link>
+
       <PageHeader
         title="Ολοκληρωμένες αξιολογήσεις"
         description="Διπλωματικές που έχουν εξεταστεί και ο τελικός βαθμός έχει οριστικοποιηθεί."
@@ -36,7 +44,7 @@ export default function CommitteeCompletedPage() {
                   </p>
                   <CardTitle className="mt-1">
                     <Link
-                      href={`/committee/evaluations/${topic.id}`}
+                      href={`/professor/evaluations/${topic.id}`}
                       className="hover:text-primary"
                     >
                       {topic.title}

@@ -1,12 +1,5 @@
 import Link from 'next/link'
-import {
-  GraduationCap,
-  BookOpen,
-  Users,
-  ClipboardCheck,
-  Building2,
-  ArrowRight,
-} from 'lucide-react'
+import { GraduationCap, BookOpen, Users, Building2, ArrowRight } from 'lucide-react'
 import { ROLE_META, type Role } from '@/lib/data'
 
 const ROLE_CARDS: {
@@ -15,7 +8,6 @@ const ROLE_CARDS: {
 }[] = [
   { role: 'student', icon: BookOpen },
   { role: 'professor', icon: Users },
-  { role: 'committee', icon: ClipboardCheck },
   { role: 'secretary', icon: Building2 },
 ]
 
@@ -48,7 +40,7 @@ export default function RoleSelectionPage() {
           </p>
         </div>
 
-        <div className="mt-8 grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ROLE_CARDS.map(({ role, icon: Icon }) => {
             const meta = ROLE_META[role]
             return (
@@ -74,7 +66,7 @@ export default function RoleSelectionPage() {
           })}
         </div>
 
-        <footer className="mt-10 text-center text-xs text-muted-foreground">
+        <footer className="mt-auto pt-10 text-center text-xs text-muted-foreground">
           Τμήμα Πληροφορικής · Ακαδημαϊκό έτος 2024–2025
         </footer>
       </div>
