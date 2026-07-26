@@ -9,8 +9,8 @@ import { Input, Textarea, Label } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Tabs } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
-import { AREAS } from '@/lib/data'
-import { createTopic } from '@/lib/actions/topics'
+import { AREAS, type Topic } from '@/lib/data'
+import { createTopic, updateTopic } from '@/lib/actions/topics'
 
 /** Χωρισμένη με κόμμα λίστα → πίνακας, χωρίς κενά στοιχεία. */
 function splitList(value: string) {
@@ -20,29 +20,56 @@ function splitList(value: string) {
     .filter(Boolean)
 }
 
-export function NewTopicForm() {
+/**
+ * Η φόρμα θέματος, κοινή για δημιουργία και επεξεργασία.
+ *
+ * Με `topic` δουλεύει σε λειτουργία επεξεργασίας: αποθηκεύει πάνω στο υπάρχον
+ * θέμα χωρίς να αγγίζει την κατάστασή του. Η δημοσίευση παραμένει ξεχωριστή
+ * ενέργεια στη σελίδα διαχείρισης, ώστε «αποθήκευση» και «το βλέπουν οι
+ * φοιτητές» να μη γίνονται ποτέ κατά λάθος το ίδιο πράγμα.
+ */
+export function TopicForm({ topic }: { topic?: Topic }) {
+  const editing = topic !== undefined
   const router = useRouter()
   const { toast } = useToast()
   const [pending, startTransition] = useTransition()
   const [lang, setLang] = useState<'el' | 'en'>('el')
-  const [title, setTitle] = useState('')
-  const [titleEn, setTitleEn] = useState('')
-  const [area, setArea] = useState(AREAS[0])
-  const [summary, setSummary] = useState('')
-  const [description, setDescription] = useState('')
-  const [descriptionEn, setDescriptionEn] = useState('')
-  const [prerequisites, setPrerequisites] = useState('')
-  const [tags, setTags] = useState('')
+  const [title, setTitle] = useState(topic?.title ?? '')
+  const [titleEn, setTitleEn] = useState(topic?.titleEn ?? '')
+  const [area, setArea] = useState(topic?.area ?? AREAS[0])
+  const [summary, setSummary] = useState(topic?.summary ?? '')
+  const [description, setDescription] = useState(topic?.description ?? '')
+  const [descriptionEn, setDescriptionEn] = useState(topic?.descriptionEn ?? '')
+  const [prerequisites, setPrerequisites] = useState(topic?.prerequisites.join(', ') ?? '')
+  const [tags, setTags] = useState(topic?.tags.join(', ') ?? '')
+  const [deadline, setDeadline] = useState(topic?.deadline ?? '')
   const [fileName, setFileName] = useState('')
 
-  function submit(publish: boolean) {
+  const backHref = editing ? `/professor/topics/${topic.id}` : '/professor/topics'
+
+  function input() {
+    return {
+      title,
+      titleEn,
+      summary,
+      description,
+      descriptionEn,
+      area,
+      tags: splitList(tags),
+      prerequisites: splitList(prerequisites),
+      deadline,
+    }
+  }
+
+  /** Ίδιοι έλεγχοι με τον server — εδώ μόνο για γρήγορη ανάδραση. */
+  function invalid(publish: boolean) {
     if (!title.trim() || !summary.trim()) {
       toast({
         title: 'Συμπληρώστε τα υποχρεωτικά πεδία',
         description: 'Ο ελληνικός τίτλος και η σύνοψη είναι απαραίτητα.',
         variant: 'warning',
       })
-      return
+      return true
     }
     if (publish && !titleEn.trim()) {
       toast({
@@ -51,22 +78,37 @@ export function NewTopicForm() {
         variant: 'warning',
       })
       setLang('en')
-      return
+      return true
     }
+    return false
+  }
+
+  function save() {
+    if (!topic || invalid(false)) return
+
     startTransition(async () => {
-      const result = await createTopic(
-        {
-          title,
-          titleEn,
-          summary,
-          description,
-          descriptionEn,
-          area,
-          tags: splitList(tags),
-          prerequisites: splitList(prerequisites),
-        },
-        publish,
-      )
+      const result = await updateTopic(topic.id, input())
+
+      if (!result.ok) {
+        toast({ title: 'Οι αλλαγές δεν αποθηκεύτηκαν', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: 'Το θέμα ενημερώθηκε',
+        description: `Οι αλλαγές στο «${title}» (${topic.id}) αποθηκεύτηκαν.`,
+        variant: 'success',
+      })
+      router.push(`/professor/topics/${topic.id}`)
+      router.refresh()
+    })
+  }
+
+  function create(publish: boolean) {
+    if (invalid(publish)) return
+
+    startTransition(async () => {
+      const result = await createTopic(input(), publish)
 
       if (!result.ok) {
         toast({
@@ -85,6 +127,7 @@ export function NewTopicForm() {
         variant: 'success',
       })
       router.push('/professor/topics')
+      router.refresh()
     })
   }
 
@@ -95,7 +138,8 @@ export function NewTopicForm() {
           className="flex flex-col gap-5"
           onSubmit={(e) => {
             e.preventDefault()
-            submit(true)
+            if (editing) save()
+            else create(true)
           }}
         >
           <Tabs
@@ -208,53 +252,72 @@ export function NewTopicForm() {
             />
             {prerequisites.trim() ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {prerequisites
-                  .split(',')
-                  .map((p) => p.trim())
-                  .filter(Boolean)
-                  .map((p) => (
-                    <span
-                      key={p}
-                      className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
-                    >
-                      {p}
-                    </span>
-                  ))}
+                {splitList(prerequisites).map((p) => (
+                  <span
+                    key={p}
+                    className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
+                  >
+                    {p}
+                  </span>
+                ))}
               </div>
             ) : null}
           </div>
 
-          <div>
-            <Label>Συνημμένο αρχείο περιγραφής (PDF)</Label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted">
-              <Upload className="size-4" />
-              {fileName || 'Επιλέξτε αρχείο PDF για μεταφόρτωση'}
-              <input
-                type="file"
-                accept="application/pdf"
-                className="sr-only"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="deadline">Προθεσμία παράδοσης</Label>
+              <Input
+                id="deadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
               />
-            </label>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Προαιρετικό. Άδειο σημαίνει «χωρίς προθεσμία».
+              </p>
+            </div>
+            <div>
+              <Label>Συνημμένο αρχείο περιγραφής (PDF)</Label>
+              <label className="flex h-9 cursor-pointer items-center gap-3 truncate rounded-lg border border-dashed border-border bg-muted/40 px-4 text-sm text-muted-foreground transition-colors hover:bg-muted">
+                <Upload className="size-4 shrink-0" />
+                {fileName || 'Επιλέξτε αρχείο PDF'}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="sr-only"
+                  onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="ghost" onClick={() => router.push('/professor/topics')}>
+            <Button type="button" variant="ghost" onClick={() => router.push(backHref)}>
               <X className="size-4" />
               Ακύρωση
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => submit(false)}
-              disabled={pending}
-            >
-              Αποθήκευση ως πρόχειρο
-            </Button>
-            <Button type="submit" disabled={pending}>
-              <Save className="size-4" />
-              {pending ? 'Αποθήκευση...' : 'Δημοσίευση θέματος'}
-            </Button>
+            {editing ? (
+              <Button type="submit" disabled={pending}>
+                <Save className="size-4" />
+                {pending ? 'Αποθήκευση...' : 'Αποθήκευση αλλαγών'}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => create(false)}
+                  disabled={pending}
+                >
+                  Αποθήκευση ως πρόχειρο
+                </Button>
+                <Button type="submit" disabled={pending}>
+                  <Save className="size-4" />
+                  {pending ? 'Αποθήκευση...' : 'Δημοσίευση θέματος'}
+                </Button>
+              </>
+            )}
           </div>
         </form>
       </CardContent>

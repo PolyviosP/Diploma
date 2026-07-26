@@ -53,7 +53,7 @@ async function currentProfessorId(): Promise<string | undefined> {
   return row?.userId
 }
 
-export type NewTopicInput = {
+export type TopicInput = {
   title: string
   titleEn: string
   summary: string
@@ -62,6 +62,8 @@ export type NewTopicInput = {
   area: string
   tags: string[]
   prerequisites: string[]
+  /** 'YYYY-MM-DD' ή κενό για «χωρίς προθεσμία». */
+  deadline: string
 }
 
 export type CreateTopicResult =
@@ -88,21 +90,46 @@ async function nextTopicId(): Promise<string> {
   return `${prefix}${String(sequence).padStart(2, '0')}`
 }
 
-export async function createTopic(
-  input: NewTopicInput,
-  publish: boolean,
-): Promise<CreateTopicResult> {
+/**
+ * Κοινή επικύρωση για δημιουργία και επεξεργασία.
+ *
+ * Ο αγγλικός τίτλος είναι υποχρεωτικός μόνο για δημοσίευση — ένα πρόχειρο
+ * επιτρέπεται να είναι ημιτελές, γι' αυτό υπάρχει η κατάσταση «πρόχειρο».
+ */
+function normalize(input: TopicInput, publish: boolean) {
   const title = input.title.trim()
   const summary = input.summary.trim()
   const titleEn = input.titleEn.trim()
 
   if (!title || !summary) {
-    return { ok: false, error: 'Ο ελληνικός τίτλος και η σύνοψη είναι υποχρεωτικά.' }
+    return { ok: false, error: 'Ο ελληνικός τίτλος και η σύνοψη είναι υποχρεωτικά.' } as const
   }
-  // Η δημοσίευση απαιτεί και αγγλικό τίτλο· το πρόχειρο όχι.
   if (publish && !titleEn) {
-    return { ok: false, error: 'Για τη δημοσίευση απαιτείται και ο αγγλικός τίτλος.' }
+    return { ok: false, error: 'Για τη δημοσίευση απαιτείται και ο αγγλικός τίτλος.' } as const
   }
+
+  return {
+    ok: true,
+    values: {
+      titleEl: title,
+      titleEn,
+      summary,
+      descriptionEl: input.description.trim() || summary,
+      descriptionEn: input.descriptionEn.trim() || titleEn || summary,
+      prerequisites: input.prerequisites,
+      area: input.area,
+      tags: input.tags,
+      deadline: input.deadline.trim() || null,
+    },
+  } as const
+}
+
+export async function createTopic(
+  input: TopicInput,
+  publish: boolean,
+): Promise<CreateTopicResult> {
+  const normalized = normalize(input, publish)
+  if (!normalized.ok) return { ok: false, error: normalized.error }
 
   const professorId = await currentProfessorId()
   if (!professorId) {
@@ -113,14 +140,7 @@ export async function createTopic(
 
   await db.insert(topics).values({
     id,
-    titleEl: title,
-    titleEn: titleEn || title,
-    summary,
-    descriptionEl: input.description.trim() || summary,
-    descriptionEn: input.descriptionEn.trim() || titleEn || summary,
-    prerequisites: input.prerequisites,
-    area: input.area,
-    tags: input.tags,
+    ...normalized.values,
     professorId,
     status: publish ? 'available' : 'draft',
   })
@@ -128,6 +148,85 @@ export async function createTopic(
   revalidateTopic(id)
 
   return { ok: true, id }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Επεξεργασία & διαγραφή προχείρου                                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Κατάσταση και ιδιοκτησία ενός θέματος — ο έλεγχος που προηγείται κάθε
+ * μεταβολής. Επιστρέφει μήνυμα σφάλματος αντί να πετάει.
+ */
+async function ownedDraft(topicId: string): Promise<ActionResult> {
+  const professorId = await currentProfessorId()
+  if (!professorId) return { ok: false, error: 'Ο διδάσκων δεν βρέθηκε.' }
+
+  const [topic] = await db
+    .select({ status: topics.status, owner: topics.professorId })
+    .from(topics)
+    .where(eq(topics.id, topicId))
+    .limit(1)
+
+  if (!topic) return { ok: false, error: 'Το θέμα δεν υπάρχει.' }
+  if (topic.owner !== professorId) {
+    return { ok: false, error: 'Το θέμα ανήκει σε άλλον διδάσκοντα.' }
+  }
+  // Μόλις δημοσιευθεί, το θέμα το βλέπουν φοιτητές και μπορεί να έχει δηλώσεις:
+  // η αλλαγή περιεχομένου περνά τότε από αίτημα τροποποίησης (UC-14).
+  if (topic.status !== 'draft') {
+    return {
+      ok: false,
+      error:
+        'Επεξεργασία και διαγραφή επιτρέπονται μόνο σε θέμα υπό επεξεργασία. Αποσύρετέ το πρώτα σε πρόχειρο.',
+    }
+  }
+
+  return { ok: true }
+}
+
+/** UC-02 — πλήρης επεξεργασία προχείρου θέματος. */
+export async function updateTopic(
+  topicId: string,
+  input: TopicInput,
+): Promise<ActionResult> {
+  const guard = await ownedDraft(topicId)
+  if (!guard.ok) return guard
+
+  const normalized = normalize(input, false)
+  if (!normalized.ok) return { ok: false, error: normalized.error }
+
+  await db
+    .update(topics)
+    .set({ ...normalized.values, updatedAt: new Date() })
+    .where(eq(topics.id, topicId))
+
+  revalidateTopic(topicId)
+  return { ok: true }
+}
+
+/**
+ * UC-02 — οριστική διαγραφή προχείρου θέματος.
+ *
+ * Οι δηλώσεις ενδιαφέροντος φεύγουν μαζί (ON DELETE CASCADE). Το `diplomas`
+ * *δεν* έχει cascade, οπότε η βάση μπλοκάρει τη διαγραφή θέματος με ανατεθειμένη
+ * διπλωματική ακόμη κι αν κάποιος παρακάμψει τον έλεγχο κατάστασης.
+ */
+export async function deleteTopic(topicId: string): Promise<ActionResult> {
+  const guard = await ownedDraft(topicId)
+  if (!guard.ok) return guard
+
+  try {
+    await db.delete(topics).where(eq(topics.id, topicId))
+  } catch {
+    return {
+      ok: false,
+      error: 'Η διαγραφή απέτυχε — το θέμα συνδέεται με υπάρχουσα διπλωματική.',
+    }
+  }
+
+  revalidateTopic(topicId)
+  return { ok: true }
 }
 
 /* -------------------------------------------------------------------------- */

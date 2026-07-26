@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   UserCheck,
@@ -13,8 +14,10 @@ import {
   Languages,
   Eye,
   AlertTriangle,
+  Pencil,
   Presentation,
   Send,
+  Trash2,
   Undo2,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -40,6 +43,7 @@ import {
 } from '@/lib/data'
 import {
   assignStudent,
+  deleteTopic,
   markPresented,
   publishTopic,
   sendToReview as sendToReviewAction,
@@ -82,6 +86,7 @@ export function TopicManagement({
   const [profileOf, setProfileOf] = useState<string | null>(null)
   const presentedAt = topic.presentedAt
   const [presentationOpen, setPresentationOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedApplicant, setSelectedApplicant] = useState<string>(
     topic.applicants?.[0]?.name ?? '',
   )
@@ -199,7 +204,28 @@ export function TopicManagement({
     )
   }
 
+  /** Δεν γίνεται router.refresh(): η σελίδα του θέματος παύει να υπάρχει. */
+  function confirmDelete() {
+    startTransition(async () => {
+      const result = await deleteTopic(topic.id)
+
+      if (!result.ok) {
+        toast({ title: 'Η διαγραφή απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: 'Το θέμα διαγράφηκε',
+        description: `Το πρόχειρο «${topic.title}» (${topic.id}) αφαιρέθηκε οριστικά.`,
+        variant: 'success',
+      })
+      router.push('/professor/topics')
+      router.refresh()
+    })
+  }
+
   const committeeComplete = committee.length === COMMITTEE_SIZE
+  const isDraft = status === 'draft'
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -360,11 +386,24 @@ export function TopicManagement({
                 )}
               </Button>
             ) : null}
-            {status === 'draft' && !topic.titleEn.trim() ? (
+            {isDraft && !topic.titleEn.trim() ? (
               <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 Για τη δημοσίευση απαιτείται αγγλικός τίτλος.
               </p>
+            ) : null}
+
+            {/* Πλήρης επεξεργασία μόνο σε πρόχειρο: μετά τη δημοσίευση το θέμα το
+                βλέπουν φοιτητές και οι αλλαγές περνούν από αίτημα τροποποίησης. */}
+            {isDraft ? (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                render={<Link href={`/professor/topics/${topic.id}/edit`} />}
+              >
+                <Pencil className="size-4" />
+                Επεξεργασία θέματος
+              </Button>
             ) : null}
 
             <Button
@@ -417,6 +456,20 @@ export function TopicManagement({
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 Ο φοιτητής δεν έχει υποβάλει ακόμη το τελικό κείμενο.
               </p>
+            ) : null}
+
+            {isDraft ? (
+              <div className="mt-1 border-t border-border pt-3">
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  disabled={pending}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-4" />
+                  Διαγραφή θέματος
+                </Button>
+              </div>
             ) : null}
           </CardContent>
         </Card>
@@ -589,6 +642,16 @@ export function TopicManagement({
           })}
         </div>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={confirmDelete}
+        title="Διαγραφή θέματος"
+        description={`Το θέμα «${topic.title}» (${topic.id}) θα διαγραφεί οριστικά μαζί με τυχόν δηλώσεις ενδιαφέροντος. Η ενέργεια δεν αναιρείται.`}
+        confirmLabel="Οριστική διαγραφή"
+        destructive
+      />
 
       <ConfirmDialog
         open={presentationOpen}

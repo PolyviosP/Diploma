@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui/page'
-import { NewTopicForm } from '@/components/professor/new-topic-form'
+import { TopicForm } from '@/components/professor/topic-form'
 
 export default function NewTopicPage() {
   return (
@@ -8,7 +8,7 @@ export default function NewTopicPage() {
         title="Δημιουργία νέου θέματος"
         description="Συμπληρώστε τα στοιχεία του θέματος διπλωματικής. Μπορείτε να το αποθηκεύσετε ως πρόχειρο ή να το δημοσιεύσετε άμεσα."
       />
-      <NewTopicForm />
+      <TopicForm />
     </div>
   )
 }
