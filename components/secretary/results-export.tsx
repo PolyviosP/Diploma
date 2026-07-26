@@ -19,10 +19,23 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/toast'
 import { cn, downloadCsv } from '@/lib/utils'
-import { PASS_THRESHOLD, finalGradeFor, formatDate, gradesFor, type Topic } from '@/lib/data'
+import {
+  PASS_THRESHOLD,
+  finalGradeOf,
+  formatDate,
+  gradesOf,
+  type Grade,
+  type Topic,
+} from '@/lib/data'
 
 /** UC-12 — λήψη αποτελεσμάτων για καταχώρηση στο φοιτητολόγιο. */
-export function ResultsExport({ topics }: { topics: Topic[] }) {
+export function ResultsExport({
+  topics,
+  allGrades,
+}: {
+  topics: Topic[]
+  allGrades: Grade[]
+}) {
   const { toast } = useToast()
   const [year, setYear] = useState('all')
   const [outcome, setOutcome] = useState('all')
@@ -40,8 +53,8 @@ export function ResultsExport({ topics }: { topics: Topic[] }) {
       topics
         .map((topic) => ({
           topic,
-          final: topic.grade ?? finalGradeFor(topic.id),
-          grades: gradesFor(topic.id),
+          final: topic.grade ?? finalGradeOf(allGrades, topic.id),
+          grades: gradesOf(allGrades, topic.id),
         }))
         .filter(({ topic, final }) => {
           const matchesYear = year === 'all' || (topic.deadline ?? topic.createdAt).startsWith(year)

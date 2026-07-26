@@ -13,13 +13,8 @@ import {
   GradeProgress,
   FinalGradeBlock,
 } from '@/components/grading/grade-summary'
-import {
-  ANNOTATIONS,
-  CURRENT_PROFESSOR,
-  GRADES,
-  TOPICS,
-  formatDate,
-} from '@/lib/data'
+import { CURRENT_PROFESSOR, formatDate } from '@/lib/data'
+import { getAnnotationsFor, getGradesFor, getTopicById } from '@/lib/db/queries'
 
 export default async function CommitteeEvaluationPage({
   params,
@@ -27,12 +22,15 @@ export default async function CommitteeEvaluationPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const topic = TOPICS.find((t) => t.id === id)
+  const topic = await getTopicById(id)
   if (!topic || !topic.committee?.includes(CURRENT_PROFESSOR)) notFound()
 
-  const myGrade = GRADES.find(
-    (g) => g.topicId === topic.id && g.professor === CURRENT_PROFESSOR,
-  )
+  const [topicGrades, topicAnnotations] = await Promise.all([
+    getGradesFor(topic.id),
+    getAnnotationsFor(topic.id),
+  ])
+
+  const myGrade = topicGrades.find((g) => g.professor === CURRENT_PROFESSOR)
   // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
   const canGrade =
     Boolean(topic.document) && Boolean(topic.presentedAt) && topic.status !== 'completed'
@@ -82,10 +80,15 @@ export default async function CommitteeEvaluationPage({
 
           <DocumentCard topic={topic} />
 
-          <GradeForm existing={myGrade} canGrade={canGrade} blockedReason={blockedReason} />
+          <GradeForm
+            topicId={topic.id}
+            existing={myGrade}
+            canGrade={canGrade}
+            blockedReason={blockedReason}
+          />
 
           <AnnotationsPanel
-            annotations={ANNOTATIONS.filter((a) => a.topicId === topic.id)}
+            annotations={topicAnnotations}
             author={CURRENT_PROFESSOR}
             readOnly={topic.status === 'completed'}
           />
@@ -165,7 +168,7 @@ export default async function CommitteeEvaluationPage({
                 </div>
               ))}
               <div className="border-t border-border pt-3">
-                <GradeProgress topicId={topic.id} />
+                <GradeProgress topicId={topic.id} allGrades={topicGrades} />
               </div>
             </CardContent>
           </Card>
@@ -175,8 +178,8 @@ export default async function CommitteeEvaluationPage({
               <CardTitle>Βαθμολογίες επιτροπής</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FinalGradeBlock topic={topic} />
-              <GradeBreakdown topicId={topic.id} showCriteria={false} />
+              <FinalGradeBlock topic={topic} allGrades={topicGrades} />
+              <GradeBreakdown topicId={topic.id} allGrades={topicGrades} showCriteria={false} />
             </CardContent>
           </Card>
         </div>

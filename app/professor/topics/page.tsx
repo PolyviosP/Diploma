@@ -3,8 +3,11 @@ import { PlusCircle } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page'
 import { Button } from '@/components/ui/button'
 import { TopicsManager } from '@/components/professor/topics-manager'
+import { getAllTopics } from '@/lib/db/queries'
 
-export default function ProfessorTopicsPage() {
+export default async function ProfessorTopicsPage() {
+  const topics = await getAllTopics()
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
@@ -16,7 +19,7 @@ export default function ProfessorTopicsPage() {
           Νέο θέμα
         </Button>
       </PageHeader>
-      <TopicsManager />
+      <TopicsManager topics={topics} />
     </div>
   )
 }

@@ -1,15 +1,17 @@
 import { PageHeader } from '@/components/ui/page'
 import { EligibilityManager } from '@/components/secretary/eligibility-manager'
-import { STUDENTS } from '@/lib/data'
+import { getStudentRecords } from '@/lib/db/queries'
 
-export default function SecretaryStudentsPage() {
+export default async function SecretaryStudentsPage() {
+  const students = await getStudentRecords()
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Δικαιούχοι φοιτητές"
         description="Έλεγχος προϋποθέσεων ανάληψης διπλωματικής και χειροκίνητη διαχείριση της λίστας δικαιούχων."
       />
-      <EligibilityManager students={STUDENTS} />
+      <EligibilityManager students={students} />
     </div>
   )
 }

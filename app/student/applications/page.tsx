@@ -1,12 +1,13 @@
 import { PageHeader } from '@/components/ui/page'
 import { ApplicationsList } from '@/components/student/applications-list'
-import { APPLICATIONS, CURRENT_STUDENT, TOPICS } from '@/lib/data'
+import { CURRENT_STUDENT } from '@/lib/data'
+import { getApplicationsOf, studentHasActiveDiploma } from '@/lib/db/queries'
 
-export default function StudentApplicationsPage() {
-  const applications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
-  const hasActiveDiploma = TOPICS.some(
-    (t) => t.student === CURRENT_STUDENT && t.status !== 'completed',
-  )
+export default async function StudentApplicationsPage() {
+  const [applications, hasActiveDiploma] = await Promise.all([
+    getApplicationsOf(CURRENT_STUDENT),
+    studentHasActiveDiploma(CURRENT_STUDENT),
+  ])
 
   return (
     <div className="space-y-6">

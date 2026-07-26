@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, X, Upload, Languages } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,10 +10,20 @@ import { Select } from '@/components/ui/select'
 import { Tabs } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
 import { AREAS } from '@/lib/data'
+import { createTopic } from '@/lib/actions/topics'
+
+/** Χωρισμένη με κόμμα λίστα → πίνακας, χωρίς κενά στοιχεία. */
+function splitList(value: string) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
 
 export function NewTopicForm() {
   const router = useRouter()
   const { toast } = useToast()
+  const [pending, startTransition] = useTransition()
   const [lang, setLang] = useState<'el' | 'en'>('el')
   const [title, setTitle] = useState('')
   const [titleEn, setTitleEn] = useState('')
@@ -43,14 +53,39 @@ export function NewTopicForm() {
       setLang('en')
       return
     }
-    toast({
-      title: publish ? 'Το θέμα δημοσιεύθηκε' : 'Το θέμα αποθηκεύτηκε ως πρόχειρο',
-      description: publish
-        ? `Το θέμα «${title}» είναι πλέον διαθέσιμο για δηλώσεις ενδιαφέροντος.`
-        : `Το θέμα «${title}» αποθηκεύτηκε. Μπορείτε να το δημοσιεύσετε αργότερα.`,
-      variant: 'success',
+    startTransition(async () => {
+      const result = await createTopic(
+        {
+          title,
+          titleEn,
+          summary,
+          description,
+          descriptionEn,
+          area,
+          tags: splitList(tags),
+          prerequisites: splitList(prerequisites),
+        },
+        publish,
+      )
+
+      if (!result.ok) {
+        toast({
+          title: 'Το θέμα δεν αποθηκεύτηκε',
+          description: result.error,
+          variant: 'warning',
+        })
+        return
+      }
+
+      toast({
+        title: publish ? 'Το θέμα δημοσιεύθηκε' : 'Το θέμα αποθηκεύτηκε ως πρόχειρο',
+        description: publish
+          ? `Το θέμα «${title}» (${result.id}) είναι πλέον διαθέσιμο για δηλώσεις ενδιαφέροντος.`
+          : `Το θέμα «${title}» (${result.id}) αποθηκεύτηκε. Μπορείτε να το δημοσιεύσετε αργότερα.`,
+        variant: 'success',
+      })
+      router.push('/professor/topics')
     })
-    router.push('/professor/topics')
   }
 
   return (
@@ -208,12 +243,17 @@ export function NewTopicForm() {
               <X className="size-4" />
               Ακύρωση
             </Button>
-            <Button type="button" variant="outline" onClick={() => submit(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => submit(false)}
+              disabled={pending}
+            >
               Αποθήκευση ως πρόχειρο
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={pending}>
               <Save className="size-4" />
-              Δημοσίευση θέματος
+              {pending ? 'Αποθήκευση...' : 'Δημοσίευση θέματος'}
             </Button>
           </div>
         </form>

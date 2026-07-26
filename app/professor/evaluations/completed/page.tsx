@@ -4,10 +4,12 @@ import { PageHeader, EmptyState } from '@/components/ui/page'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { FinalGradeBlock, GradeBreakdown } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, TOPICS, formatDate } from '@/lib/data'
+import { CURRENT_PROFESSOR, formatDate } from '@/lib/data'
+import { getAllTopics, getGrades } from '@/lib/db/queries'
 
-export default function CompletedEvaluationsPage() {
-  const diplomas = TOPICS.filter(
+export default async function CompletedEvaluationsPage() {
+  const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
+  const diplomas = allTopics.filter(
     (t) => t.committee?.includes(CURRENT_PROFESSOR) && t.status === 'completed',
   )
 
@@ -60,8 +62,8 @@ export default function CompletedEvaluationsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                <FinalGradeBlock topic={topic} />
-                <GradeBreakdown topicId={topic.id} />
+                <FinalGradeBlock topic={topic} allGrades={allGrades} />
+                <GradeBreakdown topicId={topic.id} allGrades={allGrades} />
               </CardContent>
             </Card>
           ))}

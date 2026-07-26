@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   UserCheck,
   Users,
@@ -13,6 +14,8 @@ import {
   Eye,
   AlertTriangle,
   Presentation,
+  Send,
+  Undo2,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,25 +29,55 @@ import { Notice } from '@/components/ui/notice'
 import { GradeProgress } from '@/components/grading/grade-summary'
 import { DocumentCard } from '@/components/grading/document-card'
 import {
-  PROFESSORS,
   checkEligibility,
   formatDate,
-  studentByName,
+  type Grade,
+  type Professor,
+  type StudentRecord,
   type Topic,
   type DiplomaStatus,
 } from '@/lib/data'
+import {
+  assignStudent,
+  markPresented,
+  publishTopic,
+  sendToReview as sendToReviewAction,
+  setCommittee as setCommitteeAction,
+  unpublishTopic,
+  type ActionResult,
+} from '@/lib/actions/topics'
 
 const COMMITTEE_SIZE = 3
 
-export function TopicManagement({ topic }: { topic: Topic }) {
+/**
+ * Client component: τα δεδομένα έρχονται ως props από τη σελίδα, που είναι αυτή
+ * που κάνει το query στη βάση.
+ */
+export function TopicManagement({
+  topic,
+  professors,
+  students,
+  allGrades,
+}: {
+  topic: Topic
+  professors: Professor[]
+  students: StudentRecord[]
+  allGrades: Grade[]
+}) {
   const { toast } = useToast()
-  const [status, setStatus] = useState<DiplomaStatus>(topic.status)
-  const [assigned, setAssigned] = useState<string | undefined>(topic.student)
-  const [committee, setCommittee] = useState<string[]>(topic.committee ?? [topic.professor])
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+
+  // Η αλήθεια είναι η βάση: μετά από κάθε ενέργεια γίνεται router.refresh() και
+  // το component ξαναδέχεται φρέσκα props. Τα παρακάτω είναι μόνο τα τρέχοντα.
+  const status: DiplomaStatus = topic.status
+  const assigned = topic.student
+  const committee = topic.committee ?? [topic.professor]
+
   const [assignOpen, setAssignOpen] = useState(false)
   const [committeeOpen, setCommitteeOpen] = useState(false)
   const [profileOf, setProfileOf] = useState<string | null>(null)
-  const [presentedAt, setPresentedAt] = useState<string | undefined>(topic.presentedAt)
+  const presentedAt = topic.presentedAt
   const [presentationOpen, setPresentationOpen] = useState(false)
   const [selectedApplicant, setSelectedApplicant] = useState<string>(
     topic.applicants?.[0]?.name ?? '',
@@ -53,24 +86,49 @@ export function TopicManagement({ topic }: { topic: Topic }) {
     (topic.committee ?? [topic.professor]).filter((m) => m !== topic.professor),
   )
 
-  const pool = PROFESSORS.filter((p) => p.name !== topic.professor)
-  const profileRecord = profileOf ? studentByName(profileOf) : undefined
+  const pool = professors.filter((p) => p.name !== topic.professor)
+  const profileRecord = profileOf ? students.find((s) => s.name === profileOf) : undefined
+
+  /**
+   * Κοινός χειρισμός: τρέχει το action, δείχνει το σφάλμα του server αν αποτύχει,
+   * αλλιώς ανανεώνει τη σελίδα ώστε τα δεδομένα να ξαναέρθουν από τη βάση.
+   */
+  function run(
+    action: () => Promise<ActionResult>,
+    success: { title: string; description: string },
+    onDone?: () => void,
+  ) {
+    startTransition(async () => {
+      const result = await action()
+
+      if (!result.ok) {
+        toast({ title: 'Η ενέργεια απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      onDone?.()
+      toast({ ...success, variant: 'success' })
+      router.refresh()
+    })
+  }
 
   function confirmAssign() {
-    if (!selectedApplicant) return
+    const applicant = topic.applicants?.find((a) => a.name === selectedApplicant)
+    if (!applicant) return
+
     // BR-3/BR-4 — το θέμα ανατίθεται σε έναν φοιτητή, οι υπόλοιπες δηλώσεις απορρίπτονται.
-    setAssigned(selectedApplicant)
-    setStatus('assigned')
-    setAssignOpen(false)
     const rejected = (topic.applicants?.length ?? 1) - 1
-    toast({
-      title: 'Ο φοιτητής ανατέθηκε',
-      description:
-        rejected > 0
-          ? `Το θέμα ανατέθηκε στον/στην ${selectedApplicant}. ${rejected} δηλώσεις απορρίφθηκαν αυτόματα.`
-          : `Το θέμα ανατέθηκε στον/στην ${selectedApplicant}.`,
-      variant: 'success',
-    })
+    run(
+      () => assignStudent(topic.id, applicant.am),
+      {
+        title: 'Ο φοιτητής ανατέθηκε',
+        description:
+          rejected > 0
+            ? `Το θέμα ανατέθηκε στον/στην ${applicant.name}. ${rejected} δηλώσεις απορρίφθηκαν αυτόματα.`
+            : `Το θέμα ανατέθηκε στον/στην ${applicant.name}.`,
+      },
+      () => setAssignOpen(false),
+    )
   }
 
   function toggleMember(name: string) {
@@ -93,33 +151,49 @@ export function TopicManagement({ topic }: { topic: Topic }) {
       })
       return
     }
-    setCommittee([topic.professor, ...draftCommittee])
-    setCommitteeOpen(false)
-    toast({
-      title: 'Η επιτροπή ορίστηκε',
-      description: 'Ορίστηκαν 3 μέλη στην τριμελή εξεταστική επιτροπή.',
-      variant: 'success',
-    })
+    run(
+      () => setCommitteeAction(topic.id, [topic.professor, ...draftCommittee]),
+      {
+        title: 'Η επιτροπή ορίστηκε',
+        description: 'Ορίστηκαν 3 μέλη στην τριμελή εξεταστική επιτροπή.',
+      },
+      () => setCommitteeOpen(false),
+    )
   }
 
   // BR-6 — η βαθμολόγηση ξεκλειδώνει μόνο αφού δηλωθεί η παρουσίαση.
   function confirmPresentation() {
-    setPresentedAt(new Date().toISOString().slice(0, 10))
-    setPresentationOpen(false)
-    toast({
-      title: 'Η παρουσίαση καταχωρήθηκε',
-      description: 'Τα μέλη της τριμελούς μπορούν πλέον να βαθμολογήσουν.',
-      variant: 'success',
-    })
+    run(
+      () => markPresented(topic.id),
+      {
+        title: 'Η παρουσίαση καταχωρήθηκε',
+        description: 'Τα μέλη της τριμελούς μπορούν πλέον να βαθμολογήσουν.',
+      },
+      () => setPresentationOpen(false),
+    )
   }
 
   function sendToReview() {
-    setStatus('review')
-    toast({
+    run(() => sendToReviewAction(topic.id), {
       title: 'Μετάβαση σε εξέταση',
       description: 'Η διπλωματική μεταφέρθηκε στην κατάσταση «Υπό εξέταση».',
-      variant: 'success',
     })
+  }
+
+  function togglePublished() {
+    const publishing = status === 'draft'
+    run(
+      () => (publishing ? publishTopic(topic.id) : unpublishTopic(topic.id)),
+      publishing
+        ? {
+            title: 'Το θέμα δημοσιεύθηκε',
+            description: 'Είναι πλέον ορατό στους φοιτητές για δήλωση ενδιαφέροντος.',
+          }
+        : {
+            title: 'Το θέμα αποσύρθηκε',
+            description: 'Επέστρεψε σε κατάσταση «Υπό επεξεργασία».',
+          },
+    )
   }
 
   const committeeComplete = committee.length === COMMITTEE_SIZE
@@ -191,7 +265,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <CardContent className="flex flex-col gap-3">
               {topic.applicants && topic.applicants.length > 0 ? (
                 topic.applicants.map((applicant) => {
-                  const record = studentByName(applicant.name)
+                  const record = students.find((s) => s.name === applicant.name)
                   const eligible = record ? checkEligibility(record).eligible : false
                   return (
                     <div
@@ -263,9 +337,36 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <CardTitle>Ενέργειες</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
+            {status === 'draft' || status === 'available' ? (
+              <Button
+                variant={status === 'draft' ? 'default' : 'outline'}
+                className="w-full justify-start"
+                disabled={pending}
+                onClick={togglePublished}
+              >
+                {status === 'draft' ? (
+                  <>
+                    <Send className="size-4" />
+                    Δημοσίευση θέματος
+                  </>
+                ) : (
+                  <>
+                    <Undo2 className="size-4" />
+                    Απόσυρση σε πρόχειρο
+                  </>
+                )}
+              </Button>
+            ) : null}
+            {status === 'draft' && !topic.titleEn.trim() ? (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Για τη δημοσίευση απαιτείται αγγλικός τίτλος.
+              </p>
+            ) : null}
+
             <Button
               className="w-full justify-start"
-              disabled={!(status === 'available' || status === 'draft')}
+              disabled={pending || !(status === 'available' || status === 'draft')}
               onClick={() => setAssignOpen(true)}
             >
               <UserCheck className="size-4" />
@@ -274,7 +375,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled={status === 'draft' || status === 'available'}
+              disabled={pending || status === 'draft' || status === 'available'}
               onClick={() => {
                 setDraftCommittee(committee.filter((m) => m !== topic.professor))
                 setCommitteeOpen(true)
@@ -286,7 +387,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled={status !== 'assigned' || !committeeComplete}
+              disabled={pending || status !== 'assigned' || !committeeComplete}
               onClick={sendToReview}
             >
               <ClipboardList className="size-4" />
@@ -302,7 +403,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled={status !== 'review' || !topic.document || Boolean(presentedAt)}
+              disabled={pending || status !== 'review' || !topic.document || Boolean(presentedAt)}
               onClick={() => setPresentationOpen(true)}
             >
               <Presentation className="size-4" />
@@ -374,7 +475,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
                   </div>
                 </div>
                 <div className="border-t border-border pt-3">
-                  <GradeProgress topicId={topic.id} />
+                  <GradeProgress topicId={topic.id} allGrades={allGrades} />
                 </div>
               </>
             ) : null}
@@ -405,7 +506,7 @@ export function TopicManagement({ topic }: { topic: Topic }) {
             αυτόματα (BR-4).
           </Notice>
           {(topic.applicants ?? []).map((applicant) => {
-            const record = studentByName(applicant.name)
+            const record = students.find((s) => s.name === applicant.name)
             return (
               <label
                 key={applicant.am}

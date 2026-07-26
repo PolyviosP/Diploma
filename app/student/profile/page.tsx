@@ -1,14 +1,18 @@
 import { PageHeader } from '@/components/ui/page'
 import { ProfileForm } from '@/components/student/profile-form'
+import { CURRENT_STUDENT } from '@/lib/data'
+import { getStudentByName } from '@/lib/db/queries'
 
-export default function StudentProfilePage() {
+export default async function StudentProfilePage() {
+  const record = await getStudentByName(CURRENT_STUDENT)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Το προφίλ μου"
         description="Διαχειρίσου τα προσωπικά σου στοιχεία και τις πληροφορίες επικοινωνίας."
       />
-      <ProfileForm />
+      <ProfileForm record={record} />
     </div>
   )
 }

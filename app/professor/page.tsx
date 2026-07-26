@@ -15,21 +15,26 @@ import { Badge, ChangeRequestBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GradeProgress } from '@/components/grading/grade-summary'
 import {
-  CHANGE_REQUESTS,
   CURRENT_PROFESSOR,
-  TOPICS,
-  finalGradeFor,
+  finalGradeOf,
   formatDate,
   statusMeta,
 } from '@/lib/data'
+import { getAllTopics, getChangeRequests, getGrades } from '@/lib/db/queries'
 
-export default function ProfessorDashboard() {
-  const mine = TOPICS.filter((t) => t.professor === CURRENT_PROFESSOR)
+export default async function ProfessorDashboard() {
+  const [allTopics, allRequests, allGrades] = await Promise.all([
+    getAllTopics(),
+    getChangeRequests(),
+    getGrades(),
+  ])
+
+  const mine = allTopics.filter((t) => t.professor === CURRENT_PROFESSOR)
   const open = mine.filter((t) => t.status === 'available' || t.status === 'draft')
   const active = mine.filter((t) => t.status === 'assigned' || t.status === 'review')
   const completed = mine.filter((t) => t.status === 'completed')
   const totalApplicants = open.reduce((n, t) => n + (t.applicants?.length ?? 0), 0)
-  const myRequests = CHANGE_REQUESTS.filter(
+  const myRequests = allRequests.filter(
     (r) => r.requestedBy === CURRENT_PROFESSOR && r.status !== 'approved' && r.status !== 'rejected',
   )
 
@@ -147,7 +152,7 @@ export default function ProfessorDashboard() {
                       <p className="text-sm font-medium text-foreground">{t.student}</p>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{t.title}</p>
                       <div className="mt-2">
-                        <GradeProgress topicId={t.id} />
+                        <GradeProgress topicId={t.id} allGrades={allGrades} />
                       </div>
                     </div>
                   ))
@@ -166,7 +171,7 @@ export default function ProfessorDashboard() {
                 </p>
               ) : (
                 completed.map((t) => {
-                  const final = t.grade ?? finalGradeFor(t.id)
+                  const final = t.grade ?? finalGradeOf(allGrades, t.id)
                   return (
                     <div key={t.id} className="rounded-lg border border-border p-3">
                       <p className="text-sm font-medium text-foreground">{t.student}</p>

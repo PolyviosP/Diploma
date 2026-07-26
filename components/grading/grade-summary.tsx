@@ -5,16 +5,28 @@ import { Badge } from '@/components/ui/badge'
 import {
   CRITERIA,
   PASS_THRESHOLD,
-  finalGradeFor,
+  finalGradeOf,
   formatDate,
-  gradesFor,
+  gradesOf,
   round1,
+  type Grade,
   type Topic,
 } from '@/lib/data'
 
+/**
+ * Οι βαθμοί περνιούνται ως prop αντί να διαβάζονται εδώ: το αρχείο εισάγεται και
+ * από client components, οπότε δεν μπορεί να κάνει query στη βάση.
+ */
+
 /** Οπτικοποίηση προόδου βαθμολόγησης (BR-7: οριστικοποίηση στους 3/3). */
-export function GradeProgress({ topicId }: { topicId: string }) {
-  const grades = gradesFor(topicId)
+export function GradeProgress({
+  topicId,
+  allGrades,
+}: {
+  topicId: string
+  allGrades: Grade[]
+}) {
+  const grades = gradesOf(allGrades, topicId)
   const total = 3
 
   return (
@@ -37,8 +49,14 @@ export function GradeProgress({ topicId }: { topicId: string }) {
   )
 }
 
-export function FinalGradeBlock({ topic }: { topic: Topic }) {
-  const final = topic.grade ?? finalGradeFor(topic.id)
+export function FinalGradeBlock({
+  topic,
+  allGrades,
+}: {
+  topic: Topic
+  allGrades: Grade[]
+}) {
+  const final = topic.grade ?? finalGradeOf(allGrades, topic.id)
 
   if (final == null) {
     return (
@@ -86,12 +104,14 @@ export function FinalGradeBlock({ topic }: { topic: Topic }) {
 /** Αναλυτική βαθμολογία ανά μέλος επιτροπής, με σχόλια και κριτήρια. */
 export function GradeBreakdown({
   topicId,
+  allGrades,
   showCriteria = true,
 }: {
   topicId: string
+  allGrades: Grade[]
   showCriteria?: boolean
 }) {
-  const grades = gradesFor(topicId)
+  const grades = gradesOf(allGrades, topicId)
 
   if (grades.length === 0) {
     return (

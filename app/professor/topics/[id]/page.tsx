@@ -2,7 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { TopicManagement } from '@/components/professor/topic-management'
-import { TOPICS } from '@/lib/data'
+import {
+  getGrades,
+  getProfessors,
+  getStudentRecords,
+  getTopicById,
+} from '@/lib/db/queries'
 
 export default async function ProfessorTopicDetailPage({
   params,
@@ -10,8 +15,14 @@ export default async function ProfessorTopicDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const topic = TOPICS.find((t) => t.id === id)
+  const topic = await getTopicById(id)
   if (!topic) notFound()
+
+  const [professors, students, allGrades] = await Promise.all([
+    getProfessors(),
+    getStudentRecords(),
+    getGrades(),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,7 +33,12 @@ export default async function ProfessorTopicDetailPage({
         <ArrowLeft className="size-4" />
         Πίσω στα θέματά μου
       </Link>
-      <TopicManagement topic={topic} />
+      <TopicManagement
+        topic={topic}
+        professors={professors}
+        students={students}
+        allGrades={allGrades}
+      />
     </div>
   )
 }

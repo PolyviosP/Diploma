@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Save, CheckCircle2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Notice } from '@/components/ui/notice'
 import { useToast } from '@/components/ui/toast'
 import { CRITERIA, PASS_THRESHOLD, weightedScore, type GradeCriteria, type Grade } from '@/lib/data'
 import { cn } from '@/lib/utils'
+import { submitGrade } from '@/lib/actions/grades'
 
 const EMPTY: GradeCriteria = { content: 8, methodology: 8, writing: 8, presentation: 8 }
 
@@ -18,18 +20,22 @@ const EMPTY: GradeCriteria = { content: 8, methodology: 8, writing: 8, presentat
  * πραγματοποιηθεί η παρουσίαση.
  */
 export function GradeForm({
+  topicId,
   existing,
   canGrade,
   blockedReason,
 }: {
+  topicId: string
   existing?: Grade
   canGrade: boolean
   blockedReason?: string
 }) {
   const { toast } = useToast()
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
   const [criteria, setCriteria] = useState<GradeCriteria>(existing?.criteria ?? EMPTY)
   const [comments, setComments] = useState(existing?.comments ?? '')
-  const [saved, setSaved] = useState(Boolean(existing))
+  const saved = Boolean(existing)
 
   const score = weightedScore(criteria)
 
@@ -43,11 +49,25 @@ export function GradeForm({
       })
       return
     }
-    setSaved(true)
-    toast({
-      title: saved ? 'Η βαθμολογία ενημερώθηκε' : 'Η βαθμολογία καταχωρήθηκε',
-      description: `Καταχωρήθηκε βαθμός ${score.toFixed(1)} για τη διπλωματική.`,
-      variant: 'success',
+
+    startTransition(async () => {
+      const result = await submitGrade(topicId, criteria, comments)
+
+      if (!result.ok) {
+        toast({
+          title: 'Η βαθμολογία δεν καταχωρήθηκε',
+          description: result.error,
+          variant: 'warning',
+        })
+        return
+      }
+
+      toast({
+        title: saved ? 'Η βαθμολογία ενημερώθηκε' : 'Η βαθμολογία καταχωρήθηκε',
+        description: `Καταχωρήθηκε βαθμός ${score.toFixed(1)} για τη διπλωματική.`,
+        variant: 'success',
+      })
+      router.refresh()
     })
   }
 
@@ -151,9 +171,13 @@ export function GradeForm({
               </p>
             </div>
           </div>
-          <Button type="submit">
+          <Button type="submit" disabled={pending}>
             {saved ? <CheckCircle2 className="size-4" /> : <Save className="size-4" />}
-            {saved ? 'Ενημέρωση βαθμού' : 'Καταχώρηση βαθμού'}
+            {pending
+              ? 'Αποθήκευση...'
+              : saved
+                ? 'Ενημέρωση βαθμού'
+                : 'Καταχώρηση βαθμού'}
           </Button>
         </CardFooter>
       </form>

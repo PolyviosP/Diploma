@@ -17,28 +17,37 @@ import { WorkflowSteps } from '@/components/workflow-steps'
 import { TopicCard } from '@/components/topic-card'
 import { ChangeRequestCard } from '@/components/student/change-request-card'
 import {
-  APPLICATIONS,
-  CHANGE_REQUESTS,
   CURRENT_STUDENT,
   MAX_ACTIVE_APPLICATIONS,
   ROLE_META,
   STATUS_META,
-  TOPICS,
   checkEligibility,
   formatDate,
-  studentByName,
 } from '@/lib/data'
+import {
+  getAllTopics,
+  getApplications,
+  getChangeRequests,
+  getStudentByName,
+} from '@/lib/db/queries'
 
-export default function StudentDashboard() {
+export default async function StudentDashboard() {
   const meta = ROLE_META.student
-  const record = studentByName(CURRENT_STUDENT)
+
+  const [record, allTopics, allApplications, allRequests] = await Promise.all([
+    getStudentByName(CURRENT_STUDENT),
+    getAllTopics(),
+    getApplications(),
+    getChangeRequests(),
+  ])
+
   const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
 
-  const myDiploma = TOPICS.find((t) => t.student === CURRENT_STUDENT)
-  const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
+  const myDiploma = allTopics.find((t) => t.student === CURRENT_STUDENT)
+  const myApplications = allApplications.filter((a) => a.student === CURRENT_STUDENT)
   const activeApplications = myApplications.filter((a) => a.status === 'pending')
-  const available = TOPICS.filter((t) => t.status === 'available')
-  const pendingChangeRequest = CHANGE_REQUESTS.find(
+  const available = allTopics.filter((t) => t.status === 'available')
+  const pendingChangeRequest = allRequests.find(
     (r) => r.student === CURRENT_STUDENT && r.status === 'pending_student',
   )
 

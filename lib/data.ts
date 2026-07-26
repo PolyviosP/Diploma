@@ -629,6 +629,21 @@ export function finalGradeFor(topicId: string): number | null {
   return round1(list.reduce((sum, g) => sum + g.score, 0) / list.length)
 }
 
+/**
+ * Ίδια λογική με τα `gradesFor` / `finalGradeFor`, αλλά πάνω σε βαθμούς που
+ * δίνονται ως παράμετρος — για χρήση με τα δεδομένα της βάσης αντί του mock.
+ */
+export function gradesOf(all: Grade[], topicId: string) {
+  return all.filter((g) => g.topicId === topicId)
+}
+
+/** BR-7 — τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
+export function finalGradeOf(all: Grade[], topicId: string): number | null {
+  const list = gradesOf(all, topicId)
+  if (list.length < 3) return null
+  return round1(list.reduce((sum, g) => sum + g.score, 0) / list.length)
+}
+
 export function weightedScore(criteria: GradeCriteria) {
   return round1(CRITERIA.reduce((sum, c) => sum + criteria[c.key] * c.weight, 0))
 }

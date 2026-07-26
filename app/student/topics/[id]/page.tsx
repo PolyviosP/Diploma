@@ -18,14 +18,17 @@ import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { DeclareInterest, type DeclareBlock } from '@/components/student/declare-interest'
 import {
-  APPLICATIONS,
   CURRENT_STUDENT,
   MAX_ACTIVE_APPLICATIONS,
-  TOPICS,
   checkEligibility,
   formatDate,
-  studentByName,
 } from '@/lib/data'
+import {
+  getApplicationsOf,
+  getStudentByName,
+  getTopicById,
+  studentHasActiveDiploma,
+} from '@/lib/db/queries'
 
 export default async function TopicDetailPage({
   params,
@@ -33,18 +36,19 @@ export default async function TopicDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const topic = TOPICS.find((t) => t.id === id)
+  const topic = await getTopicById(id)
   if (!topic) notFound()
 
-  const record = studentByName(CURRENT_STUDENT)
+  const [record, myApplications, hasActiveDiploma] = await Promise.all([
+    getStudentByName(CURRENT_STUDENT),
+    getApplicationsOf(CURRENT_STUDENT),
+    studentHasActiveDiploma(CURRENT_STUDENT),
+  ])
+
   const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
-  const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
   const activeApplications = myApplications.filter((a) => a.status === 'pending').length
   const alreadyApplied = myApplications.some(
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),
-  )
-  const hasActiveDiploma = TOPICS.some(
-    (t) => t.student === CURRENT_STUDENT && t.status !== 'completed',
   )
 
   // Έλεγχοι πριν τη δήλωση ενδιαφέροντος (προϋποθέσεις + BR-1 + BR-2).
@@ -81,6 +85,7 @@ export default async function TopicDetailPage({
       <PageHeader title={topic.title} description={`Κωδικός θέματος: ${topic.id}`}>
         {topic.status === 'available' ? (
           <DeclareInterest
+            topicId={topic.id}
             topicTitle={topic.title}
             block={block}
             activeApplications={activeApplications}

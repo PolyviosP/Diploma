@@ -54,19 +54,31 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env       # PowerShell: Copy-Item .env.example .env
+docker compose up -d       # PostgreSQL στο παρασκήνιο
+npm run db:migrate         # δημιουργία σχήματος
+npm run db:seed            # δεδομένα επίδειξης
+npm run dev                # η εφαρμογή, native, από πάνω τους
 ```
 
-Άνοιξε το [http://localhost:3000](http://localhost:3000). Δεν απαιτούνται μεταβλητές
-περιβάλλοντος — δεν υπάρχει ακόμη εξωτερική υπηρεσία.
+Άνοιξε το [http://localhost:3000](http://localhost:3000).
 
 Η εφαρμογή τρέχει **native, όχι σε container** — δες [Γιατί έτσι](#γιατί-έτσι) παρακάτω.
-Μόλις προστεθούν PostgreSQL/Keycloak/MinIO, το βήμα γίνεται:
+Η βάση όμως τρέχει σε container: δεν χρειάζεται να εγκαταστήσεις PostgreSQL.
 
-```bash
-docker compose up -d    # backing services στο παρασκήνιο
-npm run dev             # η εφαρμογή από πάνω τους
-```
+### Βάση δεδομένων
+
+| Εντολή | Περιγραφή |
+|---|---|
+| `npm run db:generate` | Παράγει SQL migration από αλλαγές στο [`lib/db/schema.ts`](lib/db/schema.ts) |
+| `npm run db:migrate` | Εφαρμόζει τα migrations |
+| `npm run db:seed` | Γεμίζει τη βάση από το [`lib/data.ts`](lib/data.ts) (idempotent) |
+| `npm run db:studio` | Drizzle Studio — περιήγηση στα δεδομένα |
+
+Μηδενισμός από την αρχή: `docker compose down -v` και ξανά από το `db:migrate`.
+
+> Τα migrations είναι **ξεχωριστό ρητό βήμα** — η εφαρμογή δεν τα τρέχει ποτέ στο boot.
+> Τα παραγόμενα αρχεία SQL ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
 
 ### Β. Απλή εκτέλεση
 

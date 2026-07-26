@@ -1,10 +1,15 @@
 import { PageHeader } from '@/components/ui/page'
 import { ChangeRequests } from '@/components/professor/change-requests'
-import { CHANGE_REQUESTS, CURRENT_PROFESSOR, TOPICS } from '@/lib/data'
+import { CURRENT_PROFESSOR } from '@/lib/data'
+import { getAllTopics, getChangeRequests } from '@/lib/db/queries'
 
-export default function ProfessorRequestsPage() {
-  const requests = CHANGE_REQUESTS.filter((r) => r.requestedBy === CURRENT_PROFESSOR)
-  const supervised = TOPICS.filter(
+export default async function ProfessorRequestsPage() {
+  const [allTopics, allRequests] = await Promise.all([
+    getAllTopics(),
+    getChangeRequests(),
+  ])
+  const requests = allRequests.filter((r) => r.requestedBy === CURRENT_PROFESSOR)
+  const supervised = allTopics.filter(
     (t) => t.professor === CURRENT_PROFESSOR && Boolean(t.student) && t.status !== 'completed',
   )
 

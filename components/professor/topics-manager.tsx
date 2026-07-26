@@ -7,7 +7,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/page'
-import { CURRENT_PROFESSOR, TOPICS, type DiplomaStatus, type Topic } from '@/lib/data'
+import { CURRENT_PROFESSOR, type DiplomaStatus, type Topic } from '@/lib/data'
 
 const FILTERS: { value: string; label: string; match: (t: Topic) => boolean }[] = [
   { value: 'all', label: 'Όλα', match: () => true },
@@ -18,9 +18,9 @@ const FILTERS: { value: string; label: string; match: (t: Topic) => boolean }[] 
   { value: 'completed', label: 'Ολοκληρωμένα', match: (t) => t.status === 'completed' },
 ]
 
-export function TopicsManager() {
+export function TopicsManager({ topics }: { topics: Topic[] }) {
   const [filter, setFilter] = useState('all')
-  const mine = TOPICS.filter((t) => t.professor === CURRENT_PROFESSOR)
+  const mine = topics.filter((t) => t.professor === CURRENT_PROFESSOR)
 
   const items = FILTERS.map((f) => ({
     value: f.value,

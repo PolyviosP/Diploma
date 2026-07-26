@@ -15,12 +15,11 @@ import {
   ROLE_META,
   checkEligibility,
   formatDate,
-  studentByName,
+  type StudentRecord,
 } from '@/lib/data'
 
-export function ProfileForm() {
+export function ProfileForm({ record }: { record?: StudentRecord }) {
   const meta = ROLE_META.student
-  const record = studentByName(CURRENT_STUDENT)
   const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
   const { toast } = useToast()
 
