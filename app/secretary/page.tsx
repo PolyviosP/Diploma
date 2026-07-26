@@ -18,21 +18,23 @@ import {
   getChangeRequests,
   getGrades,
   getStudentRecords,
+  getEligibilityRules,
 } from '@/lib/db/queries'
 
 export default async function SecretaryDashboard() {
-  const [allTopics, allRequests, allStudents, allGrades] = await Promise.all([
+  const [allTopics, allRequests, allStudents, allGrades, rules] = await Promise.all([
     getAllTopics(),
     getChangeRequests(),
     getStudentRecords(),
     getGrades(),
+    getEligibilityRules(),
   ])
 
   const assigned = allTopics.filter((t) => t.student)
   const inProgress = assigned.filter((t) => t.status === 'assigned' || t.status === 'review')
   const completed = assigned.filter((t) => t.status === 'completed')
   const pendingRequests = allRequests.filter((r) => r.status === 'pending_secretary')
-  const eligible = allStudents.filter((s) => checkEligibility(s).eligible)
+  const eligible = allStudents.filter((s) => checkEligibility(s, rules).eligible)
 
   const averageGrade = completed.length
     ? round1(

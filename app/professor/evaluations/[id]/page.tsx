@@ -88,6 +88,7 @@ export default async function CommitteeEvaluationPage({
           />
 
           <AnnotationsPanel
+            topicId={topic.id}
             annotations={topicAnnotations}
             author={CURRENT_PROFESSOR}
             readOnly={topic.status === 'completed'}

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from '@/components/shell/nav-config'
+import { LiveData } from '@/components/shell/live-data'
 import { ROLE_META, NOTIFICATIONS, type Role } from '@/lib/data'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -97,6 +98,8 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-background">
+      <LiveData />
+
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-sidebar lg:block">
         {SidebarContent}

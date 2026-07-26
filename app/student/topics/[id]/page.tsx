@@ -28,6 +28,7 @@ import {
   getStudentByName,
   getTopicById,
   studentHasActiveDiploma,
+  getEligibilityRules,
 } from '@/lib/db/queries'
 
 export default async function TopicDetailPage({
@@ -39,13 +40,14 @@ export default async function TopicDetailPage({
   const topic = await getTopicById(id)
   if (!topic) notFound()
 
-  const [record, myApplications, hasActiveDiploma] = await Promise.all([
+  const [record, myApplications, hasActiveDiploma, rules] = await Promise.all([
     getStudentByName(CURRENT_STUDENT),
     getApplicationsOf(CURRENT_STUDENT),
     studentHasActiveDiploma(CURRENT_STUDENT),
+    getEligibilityRules(),
   ])
 
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
   const activeApplications = myApplications.filter((a) => a.status === 'pending').length
   const alreadyApplied = myApplications.some(
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { TopicManagement } from '@/components/professor/topic-management'
 import {
+  getEligibilityRules,
   getGrades,
   getProfessors,
   getStudentRecords,
@@ -18,10 +19,11 @@ export default async function ProfessorTopicDetailPage({
   const topic = await getTopicById(id)
   if (!topic) notFound()
 
-  const [professors, students, allGrades] = await Promise.all([
+  const [professors, students, allGrades, rules] = await Promise.all([
     getProfessors(),
     getStudentRecords(),
     getGrades(),
+    getEligibilityRules(),
   ])
 
   return (
@@ -38,6 +40,7 @@ export default async function ProfessorTopicDetailPage({
         professors={professors}
         students={students}
         allGrades={allGrades}
+        rules={rules}
       />
     </div>
   )

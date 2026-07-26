@@ -29,19 +29,21 @@ import {
   getApplications,
   getChangeRequests,
   getStudentByName,
+  getEligibilityRules,
 } from '@/lib/db/queries'
 
 export default async function StudentDashboard() {
   const meta = ROLE_META.student
 
-  const [record, allTopics, allApplications, allRequests] = await Promise.all([
+  const [record, allTopics, allApplications, allRequests, rules] = await Promise.all([
     getStudentByName(CURRENT_STUDENT),
     getAllTopics(),
     getApplications(),
     getChangeRequests(),
+    getEligibilityRules(),
   ])
 
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
 
   const myDiploma = allTopics.find((t) => t.student === CURRENT_STUDENT)
   const myApplications = allApplications.filter((a) => a.student === CURRENT_STUDENT)

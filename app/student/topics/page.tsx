@@ -6,16 +6,18 @@ import {
   getApplicationsOf,
   getAvailableTopics,
   getStudentByName,
+  getEligibilityRules,
 } from '@/lib/db/queries'
 
 export default async function StudentTopicsPage() {
-  const [available, record, myApplications] = await Promise.all([
+  const [available, record, myApplications, rules] = await Promise.all([
     getAvailableTopics(),
     getStudentByName(CURRENT_STUDENT),
     getApplicationsOf(CURRENT_STUDENT),
+    getEligibilityRules(),
   ])
 
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
   const activeApplications = myApplications.filter((a) => a.status === 'pending').length
 
   return (

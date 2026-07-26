@@ -134,3 +134,44 @@ export async function declareInterest(
 
   return { ok: true }
 }
+
+/** UC-05 — ανάκληση εκκρεμούς δήλωσης. Ελευθερώνει μία θέση για το BR-2. */
+export async function withdrawApplication(
+  applicationId: string,
+): Promise<DeclareResult> {
+  const [row] = await db
+    .select({
+      id: applications.id,
+      status: applications.status,
+      topicId: applications.topicId,
+      studentName: users.fullName,
+    })
+    .from(applications)
+    .innerJoin(students, eq(applications.studentId, students.userId))
+    .innerJoin(users, eq(students.userId, users.id))
+    .where(eq(applications.id, applicationId))
+    .limit(1)
+
+  if (!row) return { ok: false, error: 'Η δήλωση δεν βρέθηκε.' }
+  if (row.studentName !== CURRENT_STUDENT) {
+    return { ok: false, error: 'Η δήλωση ανήκει σε άλλον φοιτητή.' }
+  }
+  if (row.status !== 'pending') {
+    return { ok: false, error: 'Μόνο εκκρεμείς δηλώσεις μπορούν να ανακληθούν.' }
+  }
+
+  await db
+    .update(applications)
+    .set({ status: 'withdrawn', resolvedAt: new Date() })
+    .where(eq(applications.id, applicationId))
+
+  revalidatePath('/student/applications')
+  revalidatePath('/student/topics')
+  revalidatePath(`/student/topics/${row.topicId}`)
+  revalidatePath('/student')
+  revalidatePath(`/professor/topics/${row.topicId}`)
+  revalidatePath('/professor/topics')
+  revalidatePath('/professor')
+
+  return { ok: true }
+}

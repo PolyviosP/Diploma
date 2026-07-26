@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Send, Undo2, ArrowUpRight, CalendarDays, User } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -15,8 +16,8 @@ import {
   MAX_ACTIVE_APPLICATIONS,
   formatDate,
   type Application,
-  type ApplicationStatus,
 } from '@/lib/data'
+import { withdrawApplication } from '@/lib/actions/applications'
 
 const FILTERS: { value: string; label: string; match: (a: Application) => boolean }[] = [
   { value: 'all', label: 'Όλες', match: () => true },
@@ -37,14 +38,13 @@ export function ApplicationsList({
   hasActiveDiploma: boolean
 }) {
   const { toast } = useToast()
+  const router = useRouter()
+  const [, startTransition] = useTransition()
   const [filter, setFilter] = useState('all')
-  const [statuses, setStatuses] = useState<Record<string, ApplicationStatus>>({})
   const [toWithdraw, setToWithdraw] = useState<Application | null>(null)
 
-  const list = useMemo(
-    () => applications.map((a) => ({ ...a, status: statuses[a.id] ?? a.status })),
-    [applications, statuses],
-  )
+  // Καμία τοπική επικάλυψη: οι καταστάσεις έρχονται από τη βάση.
+  const list = useMemo(() => applications, [applications])
 
   const activeCount = list.filter((a) => a.status === 'pending').length
 
@@ -58,12 +58,22 @@ export function ApplicationsList({
   const filtered = list.filter(active.match)
 
   function withdraw(application: Application) {
-    // UC-05 — ανάκληση επιτρέπεται μόνο όσο η δήλωση εκκρεμεί.
-    setStatuses((prev) => ({ ...prev, [application.id]: 'withdrawn' }))
-    toast({
-      title: 'Η δήλωση ανακλήθηκε',
-      description: `Η δήλωση για «${application.topicTitle}» δεν είναι πλέον ενεργή.`,
-      variant: 'success',
+    // UC-05 — ανάκληση επιτρέπεται μόνο όσο η δήλωση εκκρεμεί· ο έλεγχος γίνεται
+    // ξανά στον server.
+    startTransition(async () => {
+      const result = await withdrawApplication(application.id)
+
+      if (!result.ok) {
+        toast({ title: 'Η ανάκληση απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: 'Η δήλωση ανακλήθηκε',
+        description: `Η δήλωση για «${application.topicTitle}» δεν είναι πλέον ενεργή.`,
+        variant: 'success',
+      })
+      router.refresh()
     })
   }
 

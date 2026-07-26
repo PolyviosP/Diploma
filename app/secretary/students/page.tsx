@@ -1,9 +1,9 @@
 import { PageHeader } from '@/components/ui/page'
 import { EligibilityManager } from '@/components/secretary/eligibility-manager'
-import { getStudentRecords } from '@/lib/db/queries'
+import { getEligibilityRules, getStudentRecords } from '@/lib/db/queries'
 
 export default async function SecretaryStudentsPage() {
-  const students = await getStudentRecords()
+  const [students, rules] = await Promise.all([getStudentRecords(), getEligibilityRules()])
 
   return (
     <div className="space-y-6">
@@ -11,7 +11,7 @@ export default async function SecretaryStudentsPage() {
         title="Δικαιούχοι φοιτητές"
         description="Έλεγχος προϋποθέσεων ανάληψης διπλωματικής και χειροκίνητη διαχείριση της λίστας δικαιούχων."
       />
-      <EligibilityManager students={students} />
+      <EligibilityManager students={students} rules={rules} />
     </div>
   )
 }

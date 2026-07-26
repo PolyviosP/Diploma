@@ -210,3 +210,26 @@ export async function addAnnotation(
   revalidateAll(topicId)
   return { ok: true }
 }
+
+/** Διαγραφή παρατήρησης — μόνο από τον διδάσκοντα που την έγραψε. */
+export async function deleteAnnotation(
+  topicId: string,
+  annotationId: string,
+): Promise<ActionResult> {
+  const professorId = await currentProfessorId()
+  if (!professorId) return { ok: false, error: 'Ο διδάσκων δεν βρέθηκε.' }
+
+  const deleted = await db
+    .delete(annotations)
+    .where(
+      and(eq(annotations.id, annotationId), eq(annotations.professorId, professorId)),
+    )
+    .returning({ id: annotations.id })
+
+  if (!deleted.length) {
+    return { ok: false, error: 'Η παρατήρηση δεν βρέθηκε ή δεν σας ανήκει.' }
+  }
+
+  revalidateAll(topicId)
+  return { ok: true }
+}

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileEdit, Plus, Send, ArrowRight } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { EmptyState } from '@/components/ui/page'
 import { ChangeRequestBadge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { formatDate, type ChangeRequest, type Topic } from '@/lib/data'
+import { createChangeRequest } from '@/lib/actions/requests'
 
 /**
  * Αίτηση τροποποίησης θέματος από τον διδάσκοντα.
@@ -27,7 +29,10 @@ export function ChangeRequests({
   professor: string
 }) {
   const { toast } = useToast()
-  const [list, setList] = useState(requests)
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  // Καμία τοπική λίστα: τα αιτήματα έρχονται από τη βάση.
+  const list = requests
   const [open, setOpen] = useState(false)
   const [topicId, setTopicId] = useState(supervised[0]?.id ?? '')
   const [proposedTitle, setProposedTitle] = useState('')
@@ -44,27 +49,23 @@ export function ChangeRequests({
       })
       return
     }
-    setList((prev) => [
-      {
-        id: `REQ-${Math.floor(Math.random() * 900 + 100)}`,
-        topicId: selected.id,
-        currentTitle: selected.title,
-        proposedTitle: proposedTitle.trim(),
-        reason: reason.trim(),
-        requestedBy: professor,
-        student: selected.student ?? '',
-        status: 'pending_student',
-        createdAt: new Date().toISOString().slice(0, 10),
-      },
-      ...prev,
-    ])
-    setOpen(false)
-    setProposedTitle('')
-    setReason('')
-    toast({
-      title: 'Το αίτημα υποβλήθηκε',
-      description: `Ο/Η ${selected.student} θα κληθεί να επιβεβαιώσει την τροποποίηση.`,
-      variant: 'success',
+    startTransition(async () => {
+      const result = await createChangeRequest(selected.id, proposedTitle, reason)
+
+      if (!result.ok) {
+        toast({ title: 'Το αίτημα δεν υποβλήθηκε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      setOpen(false)
+      setProposedTitle('')
+      setReason('')
+      toast({
+        title: 'Το αίτημα υποβλήθηκε',
+        description: `Ο/Η ${selected.student} θα κληθεί να επιβεβαιώσει την τροποποίηση.`,
+        variant: 'success',
+      })
+      router.refresh()
     })
   }
 

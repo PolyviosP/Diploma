@@ -31,6 +31,7 @@ import { DocumentCard } from '@/components/grading/document-card'
 import {
   checkEligibility,
   formatDate,
+  type EligibilityRules,
   type Grade,
   type Professor,
   type StudentRecord,
@@ -58,11 +59,13 @@ export function TopicManagement({
   professors,
   students,
   allGrades,
+  rules,
 }: {
   topic: Topic
   professors: Professor[]
   students: StudentRecord[]
   allGrades: Grade[]
+  rules: EligibilityRules
 }) {
   const { toast } = useToast()
   const router = useRouter()
@@ -266,7 +269,7 @@ export function TopicManagement({
               {topic.applicants && topic.applicants.length > 0 ? (
                 topic.applicants.map((applicant) => {
                   const record = students.find((s) => s.name === applicant.name)
-                  const eligible = record ? checkEligibility(record).eligible : false
+                  const eligible = record ? checkEligibility(record, rules).eligible : false
                   return (
                     <div
                       key={applicant.am}
@@ -627,12 +630,12 @@ export function TopicManagement({
                 }
               />
             </dl>
-            {checkEligibility(profileRecord).eligible ? (
+            {checkEligibility(profileRecord, rules).eligible ? (
               <Notice variant="success" title="Πληροί τις προϋποθέσεις ανάληψης διπλωματικής" />
             ) : (
               <Notice variant="danger" title="Δεν πληροί τις προϋποθέσεις">
                 <ul className="list-inside list-disc">
-                  {checkEligibility(profileRecord).reasons.map((reason) => (
+                  {checkEligibility(profileRecord, rules).reasons.map((reason) => (
                     <li key={reason}>{reason}</li>
                   ))}
                 </ul>

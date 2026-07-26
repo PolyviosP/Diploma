@@ -390,6 +390,8 @@ export async function getStudentRecords(): Promise<StudentRecord[]> {
       credits: students.credits,
       gpa: students.gpa,
       manualOverride: students.manualOverride,
+      phone: students.phone,
+      address: students.address,
       transcriptKey: students.transcriptKey,
       transcriptAt: students.transcriptAt,
     })
@@ -407,6 +409,8 @@ export async function getStudentRecords(): Promise<StudentRecord[]> {
     credits: r.credits,
     gpa: Number(r.gpa ?? 0),
     manualOverride: r.manualOverride,
+    phone: r.phone ?? undefined,
+    address: r.address ?? undefined,
     transcript:
       r.transcriptKey && r.transcriptAt
         ? {

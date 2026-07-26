@@ -25,7 +25,9 @@ EXPOSE 3000
 # --webpack αντί για Turbopack: ο watcher του Turbopack στηρίζεται σε inotify, που
 # δεν παράγει events πάνω από bind mount των Windows. Το webpack σέβεται το
 # WATCHPACK_POLLING (βλ. docker-compose.dev.yml) και το hot reload δουλεύει.
-CMD ["npm", "run", "dev", "--", "--webpack", "-H", "0.0.0.0"]
+# Καλείται το `next dev` απευθείας, όχι το npm script: το `npm run dev` του host
+# σηκώνει πρώτα την Postgres με docker compose, που μέσα σε container δεν υπάρχει.
+CMD ["npx", "next", "dev", "--webpack", "-H", "0.0.0.0"]
 
 # --- build ------------------------------------------------------------------
 FROM base AS builder

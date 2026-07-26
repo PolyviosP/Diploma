@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Save, Upload, FileCheck2, CheckCircle2, XCircle } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Input, Label } from '@/components/ui/input'
@@ -10,49 +11,82 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import {
-  CURRENT_STUDENT,
-  ELIGIBILITY_RULES,
   ROLE_META,
   checkEligibility,
   formatDate,
+  type EligibilityRules,
   type StudentRecord,
 } from '@/lib/data'
+import { updateProfile, uploadTranscript as uploadTranscriptAction } from '@/lib/actions/students'
 
-export function ProfileForm({ record }: { record?: StudentRecord }) {
+export function ProfileForm({
+  record,
+  rules,
+}: {
+  record?: StudentRecord
+  rules: EligibilityRules
+}) {
   const meta = ROLE_META.student
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+  const eligibility = record
+    ? checkEligibility(record, rules)
+    : { eligible: false, reasons: [] }
   const { toast } = useToast()
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+
+  // Ονοματεπώνυμο από τη βάση, όχι σταθερές τιμές.
+  const [firstName = '', ...restOfName] = (record?.name ?? '').split(' ')
 
   const [form, setForm] = useState({
-    firstName: 'Ελένη',
-    lastName: 'Παπαδοπούλου',
+    firstName,
+    lastName: restOfName.join(' '),
     am: record?.am ?? '',
     email: record?.email ?? '',
-    phone: '+30 694 123 4567',
-    address: 'Πανεπιστημιούπολη, Κτίριο Β',
+    phone: record?.phone ?? '',
+    address: record?.address ?? '',
   })
-  const [transcript, setTranscript] = useState(record?.transcript ?? null)
+  const transcript = record?.transcript ?? null
 
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    toast({
-      title: 'Το προφίλ ενημερώθηκε',
-      description: 'Οι αλλαγές αποθηκεύτηκαν (ενδεικτικό).',
-      variant: 'success',
+    startTransition(async () => {
+      const result = await updateProfile(form.phone, form.address)
+
+      if (!result.ok) {
+        toast({ title: 'Η αποθήκευση απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: 'Το προφίλ ενημερώθηκε',
+        description: 'Τα στοιχεία επικοινωνίας αποθηκεύτηκαν.',
+        variant: 'success',
+      })
+      router.refresh()
     })
   }
 
   const uploadTranscript = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setTranscript({ name: file.name, uploadedAt: new Date().toISOString().slice(0, 10) })
-    toast({
-      title: 'Η αναλυτική βαθμολογία αναρτήθηκε',
-      description: 'Η γραμματεία θα ελέγξει τα στοιχεία σου.',
-      variant: 'success',
+
+    startTransition(async () => {
+      const result = await uploadTranscriptAction(file.name)
+
+      if (!result.ok) {
+        toast({ title: 'Η ανάρτηση απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: 'Η αναλυτική βαθμολογία αναρτήθηκε',
+        description: 'Η γραμματεία θα ελέγξει τα στοιχεία σου.',
+        variant: 'success',
+      })
+      router.refresh()
     })
   }
 
@@ -78,8 +112,8 @@ export function ProfileForm({ record }: { record?: StudentRecord }) {
           <CardHeader>
             <CardTitle className="text-base">Προϋποθέσεις ανάληψης</CardTitle>
             <CardDescription>
-              Τουλάχιστον {ELIGIBILITY_RULES.minYear}ο έτος, έως {ELIGIBILITY_RULES.maxOwedCourses}{' '}
-              οφειλόμενα μαθήματα και {ELIGIBILITY_RULES.minCredits} ECTS.
+              Τουλάχιστον {rules.minYear}ο έτος, έως {rules.maxOwedCourses}{' '}
+              οφειλόμενα μαθήματα και {rules.minCredits} ECTS.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -139,7 +173,7 @@ export function ProfileForm({ record }: { record?: StudentRecord }) {
               </div>
             </CardContent>
             <CardFooter className="justify-end pt-4">
-              <Button type="submit">
+              <Button type="submit" disabled={pending}>
                 <Save className="size-4" />
                 Αποθήκευση αλλαγών
               </Button>

@@ -86,7 +86,7 @@ export default async function StudentDiplomaPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <FinalTextUpload />
+        <FinalTextUpload document={diploma.document} />
 
         <Card>
           <CardHeader>

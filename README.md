@@ -48,20 +48,22 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 
 ### Α. Ανάπτυξη
 
-**Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5). Package manager: **npm** — το
-`package-lock.json` είναι το μοναδικό lockfile. Το Docker Desktop θα χρειαστεί μόλις
-προστεθούν τα backing services.
+**Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5) και **Docker Desktop σε λειτουργία**.
+Package manager: **npm** — το `package-lock.json` είναι το μοναδικό lockfile.
 
 ```bash
 npm install
 cp .env.example .env       # PowerShell: Copy-Item .env.example .env
-docker compose up -d       # PostgreSQL στο παρασκήνιο
 npm run db:migrate         # δημιουργία σχήματος
 npm run db:seed            # δεδομένα επίδειξης
-npm run dev                # η εφαρμογή, native, από πάνω τους
+npm run dev                # σηκώνει PostgreSQL + εφαρμογή
 ```
 
 Άνοιξε το [http://localhost:3000](http://localhost:3000).
+
+Το `npm run dev` σηκώνει **πρώτα την PostgreSQL** (`docker compose up -d --wait postgres`)
+και περιμένει να περάσει το healthcheck πριν ξεκινήσει το `next dev` — δεν χρειάζεται
+ξεχωριστό βήμα, ούτε να θυμάσαι ποιο container λείπει.
 
 Η εφαρμογή τρέχει **native, όχι σε container** — δες [Γιατί έτσι](#γιατί-έτσι) παρακάτω.
 Η βάση όμως τρέχει σε container: δεν χρειάζεται να εγκαταστήσεις PostgreSQL.
@@ -76,6 +78,17 @@ npm run dev                # η εφαρμογή, native, από πάνω του
 | `npm run db:studio` | Drizzle Studio — περιήγηση στα δεδομένα |
 
 Μηδενισμός από την αρχή: `docker compose down -v` και ξανά από το `db:migrate`.
+
+**Καμία σελίδα δεν κρατάει δεδομένα σε τοπικό state.** Όλες διαβάζουν τη βάση σε κάθε
+request (`export const dynamic = 'force-dynamic'` στα layouts των ρόλων) και οι Server
+Actions καλούν `router.refresh()` μετά από κάθε εγγραφή. Για τις αλλαγές που *δεν* κάνει
+ο ίδιος ο χρήστης — άλλος ρόλος σε άλλη καρτέλα, ή απευθείας επεξεργασία στο Drizzle
+Studio — το [`components/shell/live-data.tsx`](components/shell/live-data.tsx) κάνει
+refresh ανά 10s όσο η καρτέλα είναι ορατή, και αμέσως μόλις πάρει focus.
+
+> Αν βλέπεις παλιά δεδομένα ενώ τρέχεις σε container, το image είναι παλιό:
+> `npm run docker:prod` για ξαναχτίσιμο. Το `next build` προ-αποδίδει ό,τι δεν είναι
+> ρητά δυναμικό, οπότε ένα ξεχασμένο container σερβίρει στιγμιότυπο της ώρας του build.
 
 > Τα migrations είναι **ξεχωριστό ρητό βήμα** — η εφαρμογή δεν τα τρέχει ποτέ στο boot.
 > Τα παραγόμενα αρχεία SQL ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
@@ -108,7 +121,8 @@ docker compose -f docker-compose.dev.yml up --build
 
 | Εντολή | Περιγραφή |
 |---|---|
-| `npm run dev` | Development server, native, με hot reload |
+| `npm run dev` | PostgreSQL (container) + development server (native) με hot reload |
+| `npm run db:up` | Μόνο η PostgreSQL, χωρίς την εφαρμογή |
 | `npm run build` | Production build |
 | `npm start` | Εκτέλεση του production build |
 | `npm run docker:prod` | Τα πάντα σε containers (διαδρομή Β) |
@@ -196,17 +210,23 @@ container της εφαρμογής μόνο όταν ζητηθεί ρητά. �
 app/                    App Router — μία υποδιαδρομή ανά ρόλο
 components/
 ├── ui/                 primitives (Button, Card, Select, Dialog, Table, …)
-├── shell/              DashboardShell + διαμόρφωση πλοήγησης
+├── shell/              DashboardShell, πλοήγηση, LiveData (auto-refresh)
 ├── grading/            φόρμα βαθμολόγησης, σύνοψη, παρατηρήσεις
 ├── student/  professor/  secretary/    feature components ανά ρόλο
 lib/
-├── data.ts             domain types, mock data, business logic
+├── db/
+│   ├── schema.ts       ορισμός πινάκων (Drizzle) — η μοναδική πηγή αλήθειας
+│   ├── queries.ts      read layer· ό,τι διαβάζουν τα Server Components
+│   ├── seed.ts         γέμισμα της βάσης από το data.ts (idempotent)
+│   └── migrations/     παραγόμενα SQL, σε code review
+├── actions/            Server Actions — η μοναδική διαδρομή εγγραφής
+├── data.ts             domain types, σταθερές UI, business logic, seed source
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
 
 Dockerfile              multi-stage: deps → dev → builder → runner
-docker-compose.yml      backing services + η εφαρμογή πίσω από profile "app"
-docker-compose.dev.yml  εφαρμογή σε container με hot reload (διαδρομή Γ)
+docker-compose.yml      PostgreSQL + η εφαρμογή πίσω από profile "app"
+docker-compose.dev.yml  PostgreSQL + εφαρμογή σε container με hot reload (διαδρομή Γ)
 .dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```
 

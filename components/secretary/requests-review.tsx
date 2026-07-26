@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileEdit, Check, X, ArrowRight, User, CalendarDays } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,8 @@ import { EmptyState } from '@/components/ui/page'
 import { ChangeRequestBadge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
-import { formatDate, type ChangeRequest, type ChangeRequestStatus } from '@/lib/data'
+import { formatDate, type ChangeRequest } from '@/lib/data'
+import { decideChangeRequest } from '@/lib/actions/requests'
 
 const FILTERS: { value: string; label: string; match: (r: ChangeRequest) => boolean }[] = [
   { value: 'pending', label: 'Προς έγκριση', match: (r) => r.status === 'pending_secretary' },
@@ -25,14 +27,16 @@ const FILTERS: { value: string; label: string; match: (r: ChangeRequest) => bool
 /** Έγκριση τροποποίησης θέματος από τη γραμματεία (τελικό στάδιο ροής). */
 export function RequestsReview({ requests }: { requests: ChangeRequest[] }) {
   const { toast } = useToast()
+  const router = useRouter()
+  const [, startTransition] = useTransition()
   const [filter, setFilter] = useState('pending')
-  const [statuses, setStatuses] = useState<Record<string, ChangeRequestStatus>>({})
   const [decision, setDecision] = useState<{
     request: ChangeRequest
     approve: boolean
   } | null>(null)
 
-  const list = requests.map((r) => ({ ...r, status: statuses[r.id] ?? r.status }))
+  // Καμία τοπική επικάλυψη κατάστασης: ό,τι δείχνει η λίστα έρχεται από τη βάση.
+  const list = requests
 
   const items = FILTERS.map((f) => ({
     value: f.value,
@@ -44,13 +48,26 @@ export function RequestsReview({ requests }: { requests: ChangeRequest[] }) {
   const filtered = list.filter(active.match)
 
   function decide(request: ChangeRequest, approve: boolean) {
-    setStatuses((prev) => ({ ...prev, [request.id]: approve ? 'approved' : 'rejected' }))
-    toast({
-      title: approve ? 'Το αίτημα εγκρίθηκε' : 'Το αίτημα απορρίφθηκε',
-      description: approve
-        ? `Ο τίτλος του ${request.topicId} ενημερώθηκε στο μητρώο.`
-        : `Ο τίτλος του ${request.topicId} παραμένει αμετάβλητος.`,
-      variant: approve ? 'success' : 'warning',
+    startTransition(async () => {
+      const result = await decideChangeRequest(request.id, approve)
+
+      if (!result.ok) {
+        toast({
+          title: 'Η απόφαση δεν καταχωρήθηκε',
+          description: result.error,
+          variant: 'warning',
+        })
+        return
+      }
+
+      toast({
+        title: approve ? 'Το αίτημα εγκρίθηκε' : 'Το αίτημα απορρίφθηκε',
+        description: approve
+          ? `Ο τίτλος του ${request.topicId} ενημερώθηκε στο μητρώο.`
+          : `Ο τίτλος του ${request.topicId} παραμένει αμετάβλητος.`,
+        variant: approve ? 'success' : 'warning',
+      })
+      router.refresh()
     })
   }
 
