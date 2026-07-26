@@ -16,9 +16,10 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 
 Ολοκληρωμένο:
 
-- [x] Πλοήγηση και σελίδες και για τους 4 ρόλους
+- [x] Πλοήγηση και σελίδες και για τους 3 ρόλους
 - [x] Επιβολή των business rules στο επίπεδο του UI
 - [x] Εξαγωγή αποτελεσμάτων σε CSV
+- [x] Containerization — τρέχει με μία εντολή, χωρίς εγκατεστημένο Node
 - [ ] Backend / βάση δεδομένων
 - [ ] Αυθεντικοποίηση (SSO)
 - [ ] Πραγματικό upload αρχείων
@@ -36,12 +37,20 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 | Primitives | Base UI (`@base-ui/react`) — shadcn style `base-nova` |
 | Εικονίδια | lucide-react |
 | Γραμματοσειρά | Inter μέσω `next/font/google` (self-hosted) |
+| Containerization | Docker multi-stage + docker-compose |
 
 ---
 
 ## Εκκίνηση
 
-**Προϋποθέσεις:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5).
+Υπάρχουν δύο κοινά με διαφορετικές ανάγκες: όποιος **γράφει** κώδικα και όποιος θέλει
+απλώς να **τρέξει** το project. Διάλεξε ανάλογα.
+
+### Α. Ανάπτυξη
+
+**Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5). Package manager: **npm** — το
+`package-lock.json` είναι το μοναδικό lockfile. Το Docker Desktop θα χρειαστεί μόλις
+προστεθούν τα backing services.
 
 ```bash
 npm install
@@ -51,18 +60,70 @@ npm run dev
 Άνοιξε το [http://localhost:3000](http://localhost:3000). Δεν απαιτούνται μεταβλητές
 περιβάλλοντος — δεν υπάρχει ακόμη εξωτερική υπηρεσία.
 
+Η εφαρμογή τρέχει **native, όχι σε container** — δες [Γιατί έτσι](#γιατί-έτσι) παρακάτω.
+Μόλις προστεθούν PostgreSQL/Keycloak/MinIO, το βήμα γίνεται:
+
+```bash
+docker compose up -d    # backing services στο παρασκήνιο
+npm run dev             # η εφαρμογή από πάνω τους
+```
+
+### Β. Απλή εκτέλεση
+
+Για επίδειξη, αξιολόγηση, ή έλεγχο ότι όλα δουλεύουν. **Χρειάζεται μόνο Docker Desktop** —
+ούτε Node, ούτε `npm install`, ούτε σωστή έκδοση runtime.
+
+```bash
+docker compose --profile app up --build
+```
+
+Το πρώτο build παίρνει μερικά λεπτά· τα επόμενα είναι cached. Τερματισμός με `Ctrl+C`
+ή `docker compose down`.
+
+### Γ. Ανάπτυξη χωρίς εγκατεστημένο Node
+
+Εφεδρική διαδρομή: η εφαρμογή τρέχει σε container με hot reload, ο κώδικας έρχεται από
+bind mount.
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+> ⚠️ Σε Windows host είναι **αισθητά πιο αργό** (μετρημένα ~2.7s ανά compile έναντι ~0.5s
+> native). Χρησιμοποίησέ το μόνο αν δεν μπορείς να εγκαταστήσεις Node.
+
 ### Scripts
 
 | Εντολή | Περιγραφή |
 |---|---|
-| `npm run dev` | Development server με hot reload |
+| `npm run dev` | Development server, native, με hot reload |
 | `npm run build` | Production build |
 | `npm start` | Εκτέλεση του production build |
+| `npm run docker:prod` | Τα πάντα σε containers (διαδρομή Β) |
+| `npm run docker:dev` | Εφαρμογή σε container με hot reload (διαδρομή Γ) |
+| `npm run docker:down` | Τερματισμός όλων των containers |
 | `npx tsc --noEmit` | Έλεγχος τύπων |
 
 > ⚠️ Το `npm run lint` **δεν λειτουργεί** — το script καλεί `eslint` αλλά το ESLint δεν
 > υπάρχει στα dependencies ούτε υπάρχει config. Χρειάζεται είτε εγκατάσταση
 > (`npm i -D eslint eslint-config-next` + `eslint.config.mjs`) είτε αφαίρεση του script.
+
+### Γιατί έτσι
+
+Ο κανόνας είναι **ό,τι δεν επεξεργάζεσαι τρέχει σε container, ό,τι επεξεργάζεσαι τρέχει
+native**. PostgreSQL, Keycloak και MinIO δεν τα αγγίζει κανείς — είναι υποδομή, και το
+container είναι ο σωστός τρόπος να στηθούν χωρίς τοπική εγκατάσταση. Ο κώδικας της
+εφαρμογής όμως αλλάζει συνεχώς, και εκεί το container κοστίζει: μετρημένα σε αυτό το
+project, ίδιο route, cold compile **0.47s native έναντι 2.73s σε container**.
+
+Δύο αιτίες: ο watcher του Turbopack δεν λαμβάνει inotify events πάνω από bind mount των
+Windows (γι' αυτό το dev image πέφτει πίσω σε webpack με polling), και κάθε ανάγνωση
+αρχείου περνάει τα σύνορα Windows→Linux VM.
+
+Γι' αυτό στο [`docker-compose.yml`](docker-compose.yml) η εφαρμογή είναι πίσω από το
+profile `app`: τα backing services σηκώνονται με σκέτο `docker compose up -d`, ενώ το
+container της εφαρμογής μόνο όταν ζητηθεί ρητά. Το [`Dockerfile`](Dockerfile) παραμένει
+απαραίτητο για production, CI, και τη διαδρομή Β.
 
 ---
 
@@ -130,6 +191,11 @@ lib/
 ├── data.ts             domain types, mock data, business logic
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
+
+Dockerfile              multi-stage: deps → dev → builder → runner
+docker-compose.yml      backing services + η εφαρμογή πίσω από profile "app"
+docker-compose.dev.yml  εφαρμογή σε container με hot reload (διαδρομή Γ)
+.dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```
 
 ---
@@ -193,10 +259,22 @@ badge να μη χρησιμοποιούν αυθαίρετα χρώματα. Α
 | Database | **PostgreSQL 16** + Drizzle ORM |
 | Auth | **Keycloak** (OIDC) — δέχεται ομοσπονδία με SSO ιδρύματος |
 | Αποθήκευση αρχείων | **MinIO** (S3-compatible) |
-| Orchestration | **docker-compose** — η εφαρμογή σηκώνεται με μία εντολή |
+| Orchestration | **docker-compose** — ✅ έτοιμο, τα services προστίθενται σταδιακά |
 
 Δεν προβλέπεται ξεχωριστό backend service: τα Server Components διαβάζουν κατευθείαν από τη
 βάση και τα Server Actions γράφουν.
+
+Τα τρία services μπαίνουν στο [`docker-compose.yml`](docker-compose.yml) **χωρίς profile**,
+ώστε να σηκώνονται με σκέτο `docker compose up -d`. Αρχές που τηρούνται:
+
+- **Καρφωμένες εκδόσεις** (`postgres:16.4`, όχι `latest`) για αναπαραγωγιμότητα
+- **Healthcheck** σε κάθε service + `depends_on: condition: service_healthy`
+- **Named volumes** για τα δεδομένα· μηδενισμός με `docker compose down -v`
+- **Ρυθμίσεις μόνο από environment** (`DATABASE_URL`, `KEYCLOAK_ISSUER`, `S3_ENDPOINT`),
+  με `.env.example` στο repo και `.env` στο gitignore
+- **Το Keycloak realm ως κώδικας** — export σε JSON, import με `--import-realm`· καμία
+  χειροκίνητη ρύθμιση από admin console
+- **Migrations ως ξεχωριστό ρητό βήμα**, ποτέ αυτόματα στο boot της εφαρμογής
 
 Το πλήρες σχεσιακό σχήμα, η σειρά υλοποίησης και τα σημεία όπου κάθε business rule
 επιβάλλεται ως constraint βρίσκονται στο [`PROJECT_SPEC.md`](PROJECT_SPEC.md).

@@ -1,0 +1,31 @@
+# Development stack — hot reload μέσα σε container.
+#   docker compose -f docker-compose.dev.yml up
+#
+# Το production compose (docker-compose.yml) μένει ανέπαφο· τα δύο αρχεία δεν
+# συνδυάζονται, διαλέγεις ένα από τα δύο.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    image: dev
+    container_name: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Ο πηγαίος κώδικας από τον host — κάθε αλλαγή φαίνεται αμέσως.
+      - .:/app
+      # Anonymous volumes: σκιάζουν τα host node_modules/.next ώστε να μη
+      # μπερδεύονται τα native binaries του Windows με αυτά του container.
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Ο host είναι Windows: το inotify δεν περνάει από το bind mount, οπότε το
+      # file watching γίνεται με polling. Το WATCHPACK_POLLING το διαβάζει μόνο
+      # ο webpack — γι' αυτό το dev stage τρέχει `next dev --webpack`.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"

@@ -29,10 +29,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="el" className={`${inter.variable} bg-background light`}>
+    // suppressHydrationWarning: extensions του browser (theme switchers, download
+    // managers κ.λπ.) προσθέτουν κλάσεις/attributes στο <html> πριν το hydration,
+    // πράγμα που το React το αναφέρει ως mismatch. Ισχύει μόνο για αυτό το ένα
+    // στοιχείο — τα παιδιά του ελέγχονται κανονικά.
+    <html
+      lang="el"
+      className={`${inter.variable} bg-background light`}
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased">
         <ToastProvider>{children}</ToastProvider>
-        {process.env.NODE_ENV === 'production'}
       </body>
     </html>
   )
