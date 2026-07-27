@@ -6,8 +6,30 @@
 # για production, CI, ή για όποιον θέλει να τρέξει το project χωρίς Node.
 
 services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: diploma-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: diploma
+      POSTGRES_PASSWORD: diploma
+      POSTGRES_DB: diploma
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diploma -d diploma"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   app:
     profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile
@@ -18,6 +40,8 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      # Μέσα στο δίκτυο του compose η βάση είναι στο hostname "postgres", όχι localhost.
+      DATABASE_URL: postgresql://diploma:diploma@postgres:5432/diploma
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -25,5 +49,8 @@ services:
       retries: 3
       start_period: 20s
 
-# Επόμενα βήματα (PROJECT_SPEC.md §12): postgres → minio → keycloak, χωρίς profile,
+volumes:
+  postgres-data:
+
+# Επόμενα βήματα (PROJECT_SPEC.md §12): minio → keycloak, χωρίς profile,
 # με healthcheck και named volume το καθένα.

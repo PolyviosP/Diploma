@@ -17,34 +17,37 @@ import { Avatar } from '@/components/ui/avatar'
 import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { DeclareInterest, type DeclareBlock } from '@/components/student/declare-interest'
+import { MAX_ACTIVE_APPLICATIONS, checkEligibility, formatDate } from '@/lib/data'
 import {
-  APPLICATIONS,
-  CURRENT_STUDENT,
-  MAX_ACTIVE_APPLICATIONS,
-  TOPICS,
-  checkEligibility,
-  formatDate,
-  studentByName,
-} from '@/lib/data'
+  getApplicationsOf,
+  getStudentByName,
+  getTopicById,
+  studentHasActiveDiploma,
+  getEligibilityRules,
+} from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function TopicDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const me = await currentStudent()
   const { id } = await params
-  const topic = TOPICS.find((t) => t.id === id)
+  const topic = await getTopicById(id)
   if (!topic) notFound()
 
-  const record = studentByName(CURRENT_STUDENT)
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
-  const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
+  const [record, myApplications, hasActiveDiploma, rules] = await Promise.all([
+    getStudentByName(me),
+    getApplicationsOf(me),
+    studentHasActiveDiploma(me),
+    getEligibilityRules(),
+  ])
+
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
   const activeApplications = myApplications.filter((a) => a.status === 'pending').length
   const alreadyApplied = myApplications.some(
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),
-  )
-  const hasActiveDiploma = TOPICS.some(
-    (t) => t.student === CURRENT_STUDENT && t.status !== 'completed',
   )
 
   // Έλεγχοι πριν τη δήλωση ενδιαφέροντος (προϋποθέσεις + BR-1 + BR-2).
@@ -81,6 +84,7 @@ export default async function TopicDetailPage({
       <PageHeader title={topic.title} description={`Κωδικός θέματος: ${topic.id}`}>
         {topic.status === 'available' ? (
           <DeclareInterest
+            topicId={topic.id}
             topicTitle={topic.title}
             block={block}
             activeApplications={activeApplications}

@@ -1,17 +1,19 @@
-import Link from 'next/link'
-import { GraduationCap, BookOpen, Users, Building2, ArrowRight } from 'lucide-react'
-import { ROLE_META, type Role } from '@/lib/data'
+import { GraduationCap } from 'lucide-react'
+import { RolePicker } from '@/components/role-picker'
+import { getProfessors, getStudentRecords } from '@/lib/db/queries'
+import { currentProfessor, currentStudent } from '@/lib/session'
 
-const ROLE_CARDS: {
-  role: Role
-  icon: React.ComponentType<{ className?: string }>
-}[] = [
-  { role: 'student', icon: BookOpen },
-  { role: 'professor', icon: Users },
-  { role: 'secretary', icon: Building2 },
-]
+/** Οι λίστες έρχονται από τη βάση, οπότε η σελίδα δεν προ-αποδίδεται. */
+export const dynamic = 'force-dynamic'
 
-export default function RoleSelectionPage() {
+export default async function RoleSelectionPage() {
+  const [students, professors, student, professor] = await Promise.all([
+    getStudentRecords(),
+    getProfessors(),
+    currentStudent(),
+    currentProfessor(),
+  ])
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Decorative institutional header band */}
@@ -40,31 +42,18 @@ export default function RoleSelectionPage() {
           </p>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {ROLE_CARDS.map(({ role, icon: Icon }) => {
-            const meta = ROLE_META[role]
-            return (
-              <Link
-                key={role}
-                href={`/${role}`}
-                className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-6" />
-                  </div>
-                  <ArrowRight className="size-5 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-primary" />
-                </div>
-                <h2 className="mt-4 font-serif text-lg font-semibold text-card-foreground">
-                  {meta.label}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground text-pretty">
-                  {meta.description}
-                </p>
-              </Link>
-            )
-          })}
-        </div>
+        <RolePicker
+          students={students.map((s) => ({
+            name: s.name,
+            detail: `ΑΜ ${s.am} · ${s.year}ο έτος · Μ.Ο. ${s.gpa.toFixed(1)}`,
+          }))}
+          professors={professors.map((p) => ({
+            name: p.name,
+            detail: [p.rank, p.area].filter(Boolean).join(' · '),
+          }))}
+          currentStudent={student}
+          currentProfessor={professor}
+        />
 
         <footer className="mt-auto pt-10 text-center text-xs text-muted-foreground">
           Τμήμα Πληροφορικής · Ακαδημαϊκό έτος 2024–2025

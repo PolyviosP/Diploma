@@ -13,16 +13,19 @@ import {
   GradeBreakdown,
   GradeProgress,
 } from '@/components/grading/grade-summary'
+import { formatDate } from '@/lib/data'
 import {
-  ANNOTATIONS,
-  CHANGE_REQUESTS,
-  CURRENT_STUDENT,
-  TOPICS,
-  formatDate,
-} from '@/lib/data'
+  getAllTopics,
+  getAnnotationsFor,
+  getChangeRequests,
+  getGrades,
+} from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
-export default function StudentDiplomaPage() {
-  const diploma = TOPICS.find((t) => t.student === CURRENT_STUDENT)
+export default async function StudentDiplomaPage() {
+  const me = await currentStudent()
+  const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
+  const diploma = allTopics.find((t) => t.student === me)
 
   if (!diploma) {
     return (
@@ -43,10 +46,13 @@ export default function StudentDiplomaPage() {
     )
   }
 
-  const changeRequest = CHANGE_REQUESTS.find(
-    (r) => r.topicId === diploma.id && r.student === CURRENT_STUDENT,
+  const [allRequests, annotations] = await Promise.all([
+    getChangeRequests(),
+    getAnnotationsFor(diploma.id),
+  ])
+  const changeRequest = allRequests.find(
+    (r) => r.topicId === diploma.id && r.student === me,
   )
-  const annotations = ANNOTATIONS.filter((a) => a.topicId === diploma.id)
   // UC-13 — οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
   const gradesVisible = diploma.status === 'completed'
 
@@ -82,7 +88,7 @@ export default function StudentDiplomaPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <FinalTextUpload />
+        <FinalTextUpload document={diploma.document} />
 
         <Card>
           <CardHeader>
@@ -101,7 +107,7 @@ export default function StudentDiplomaPage() {
                   </div>
                 ))}
                 <div className="border-t border-border pt-3">
-                  <GradeProgress topicId={diploma.id} />
+                  <GradeProgress topicId={diploma.id} allGrades={allGrades} />
                 </div>
               </>
             ) : (
@@ -143,9 +149,9 @@ export default function StudentDiplomaPage() {
           <CardTitle>Βαθμολογία</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <FinalGradeBlock topic={diploma} />
+          <FinalGradeBlock topic={diploma} allGrades={allGrades} />
           {gradesVisible ? (
-            <GradeBreakdown topicId={diploma.id} />
+            <GradeBreakdown topicId={diploma.id} allGrades={allGrades} />
           ) : (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <MessageSquare className="size-4 shrink-0" />

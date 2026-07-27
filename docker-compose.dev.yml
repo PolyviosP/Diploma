@@ -5,6 +5,26 @@
 # συνδυάζονται, διαλέγεις ένα από τα δύο.
 
 services:
+  # Ίδια εικόνα και ίδιος named volume με το docker-compose.yml, οπότε τα δεδομένα
+  # είναι τα ίδια είτε τρέξεις dev είτε prod.
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: diploma-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-diploma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-diploma}
+      POSTGRES_DB: ${POSTGRES_DB:-diploma}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-diploma} -d ${POSTGRES_DB:-diploma}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   app:
     build:
       context: .
@@ -12,6 +32,9 @@ services:
       target: dev
     image: dev
     container_name: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
     volumes:
@@ -24,8 +47,13 @@ services:
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: "1"
+      # Μέσα στο δίκτυο του compose η βάση λέγεται «postgres», όχι «localhost».
+      DATABASE_URL: postgresql://${POSTGRES_USER:-diploma}:${POSTGRES_PASSWORD:-diploma}@postgres:5432/${POSTGRES_DB:-diploma}
       # Ο host είναι Windows: το inotify δεν περνάει από το bind mount, οπότε το
       # file watching γίνεται με polling. Το WATCHPACK_POLLING το διαβάζει μόνο
       # ο webpack — γι' αυτό το dev stage τρέχει `next dev --webpack`.
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+
+volumes:
+  postgres-data:

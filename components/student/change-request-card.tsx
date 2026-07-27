@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileEdit, Check, X, ArrowRight } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChangeRequestBadge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
-import { formatDate, type ChangeRequest, type ChangeRequestStatus } from '@/lib/data'
+import { formatDate, type ChangeRequest } from '@/lib/data'
+import { respondToChangeRequest } from '@/lib/actions/requests'
 
 /**
  * UC — Επιβεβαίωση τροποποίησης θέματος από τον φοιτητή.
@@ -15,29 +17,42 @@ import { formatDate, type ChangeRequest, type ChangeRequestStatus } from '@/lib/
  */
 export function ChangeRequestCard({ request }: { request: ChangeRequest }) {
   const { toast } = useToast()
-  const [status, setStatus] = useState<ChangeRequestStatus>(request.status)
+  const router = useRouter()
+  const [, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
 
+  const status = request.status
   const pending = status === 'pending_student'
 
-  function accept() {
-    setStatus('pending_secretary')
-    toast({
-      title: 'Η τροποποίηση επιβεβαιώθηκε',
-      description: 'Το αίτημα προωθήθηκε στη γραμματεία για τελική έγκριση.',
-      variant: 'success',
+  function respond(accepted: boolean) {
+    startTransition(async () => {
+      const result = await respondToChangeRequest(request.id, accepted)
+
+      if (!result.ok) {
+        toast({ title: 'Η απάντηση δεν καταχωρήθηκε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast(
+        accepted
+          ? {
+              title: 'Η τροποποίηση επιβεβαιώθηκε',
+              description: 'Το αίτημα προωθήθηκε στη γραμματεία για τελική έγκριση.',
+              variant: 'success',
+            }
+          : {
+              title: 'Η τροποποίηση απορρίφθηκε',
+              description: 'Ο επιβλέπων θα ενημερωθεί για την απόφασή σου.',
+              variant: 'warning',
+            },
+      )
+      router.refresh()
     })
   }
 
-  function reject() {
-    setStatus('rejected')
-    toast({
-      title: 'Η τροποποίηση απορρίφθηκε',
-      description: 'Ο επιβλέπων θα ενημερωθεί για την απόφασή σου.',
-      variant: 'warning',
-    })
-  }
+  const accept = () => respond(true)
+  const reject = () => respond(false)
 
   return (
     <Card className="border-status-assigned-foreground/25">

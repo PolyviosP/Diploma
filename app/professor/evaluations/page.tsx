@@ -6,15 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { GradeProgress } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, GRADES, TOPICS, formatDate } from '@/lib/data'
+import { formatDate } from '@/lib/data'
+import { getAllTopics, getGrades } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
-export default function ProfessorEvaluationsPage() {
+export default async function ProfessorEvaluationsPage() {
+  const me = await currentProfessor()
+  const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
+
   const gradedIds = new Set(
-    GRADES.filter((g) => g.professor === CURRENT_PROFESSOR).map((g) => g.topicId),
+    allGrades.filter((g) => g.professor === me).map((g) => g.topicId),
   )
 
-  const diplomas = TOPICS.filter(
-    (t) => t.committee?.includes(CURRENT_PROFESSOR) && t.status === 'review',
+  const diplomas = allTopics.filter(
+    (t) => t.committee?.includes(me) && t.status === 'review',
   )
 
   return (
@@ -103,7 +108,7 @@ export default function ProfessorEvaluationsPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-                  <GradeProgress topicId={topic.id} />
+                  <GradeProgress topicId={topic.id} allGrades={allGrades} />
                   <Button
                     variant={graded ? 'outline' : 'default'}
                     size="sm"

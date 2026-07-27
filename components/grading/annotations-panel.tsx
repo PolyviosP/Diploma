@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { MessageSquarePlus, StickyNote, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,19 +9,25 @@ import { Input, Textarea, Label } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/toast'
 import { formatDate, type Annotation } from '@/lib/data'
+import { addAnnotation, deleteAnnotation } from '@/lib/actions/grades'
 
 /** Καταχώρηση παρατηρήσεων επί του κειμένου, ανά σελίδα. */
 export function AnnotationsPanel({
+  topicId,
   annotations,
   author,
   readOnly = false,
 }: {
+  topicId: string
   annotations: Annotation[]
   author: string
   readOnly?: boolean
 }) {
   const { toast } = useToast()
-  const [list, setList] = useState(annotations)
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  // Καμία τοπική λίστα: οι παρατηρήσεις έρχονται από τη βάση.
+  const list = annotations
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
 
@@ -35,20 +42,31 @@ export function AnnotationsPanel({
       })
       return
     }
-    setList((prev) => [
-      ...prev,
-      {
-        id: `ANN-${Date.now()}`,
-        topicId: annotations[0]?.topicId ?? '',
-        professor: author,
-        page: pageNumber,
-        text: text.trim(),
-        createdAt: new Date().toISOString().slice(0, 10),
-      },
-    ])
-    setPage('')
-    setText('')
-    toast({ title: 'Η παρατήρηση καταχωρήθηκε', variant: 'success' })
+    startTransition(async () => {
+      const result = await addAnnotation(topicId, pageNumber, text)
+
+      if (!result.ok) {
+        toast({ title: 'Η παρατήρηση δεν καταχωρήθηκε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      setPage('')
+      setText('')
+      toast({ title: 'Η παρατήρηση καταχωρήθηκε', variant: 'success' })
+      router.refresh()
+    })
+  }
+
+  function remove(annotationId: string) {
+    startTransition(async () => {
+      const result = await deleteAnnotation(topicId, annotationId)
+
+      if (!result.ok) {
+        toast({ title: 'Η διαγραφή απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+      router.refresh()
+    })
   }
 
   const sorted = [...list].sort((a, b) => a.page - b.page)
@@ -87,7 +105,8 @@ export function AnnotationsPanel({
                 {!readOnly && annotation.professor === author ? (
                   <button
                     type="button"
-                    onClick={() => setList((prev) => prev.filter((a) => a.id !== annotation.id))}
+                    disabled={pending}
+                    onClick={() => remove(annotation.id)}
                     className="h-fit rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
                     aria-label="Διαγραφή παρατήρησης"
                   >

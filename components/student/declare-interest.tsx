@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Send, CheckCircle2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Label, Textarea } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
 import { MAX_ACTIVE_APPLICATIONS } from '@/lib/data'
+import { declareInterest } from '@/lib/actions/applications'
 
 export type DeclareBlock = { blocked: true; title: string; detail: string } | { blocked: false }
 
@@ -16,11 +17,13 @@ export type DeclareBlock = { blocked: true; title: string; detail: string } | { 
  * πριν επιτραπεί η υποβολή.
  */
 export function DeclareInterest({
+  topicId,
   topicTitle,
   block = { blocked: false },
   activeApplications = 0,
   alreadyApplied = false,
 }: {
+  topicId: string
   topicTitle: string
   block?: DeclareBlock
   activeApplications?: number
@@ -28,15 +31,23 @@ export function DeclareInterest({
 }) {
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [pending, startTransition] = useTransition()
   const [declared, setDeclared] = useState(alreadyApplied)
   const { toast } = useToast()
 
   const submit = () => {
-    setSubmitting(true)
-    // Simulated async submission (no backend)
-    setTimeout(() => {
-      setSubmitting(false)
+    startTransition(async () => {
+      const result = await declareInterest(topicId, note)
+
+      if (!result.ok) {
+        toast({
+          title: 'Η δήλωση δεν καταχωρήθηκε',
+          description: result.error,
+          variant: 'warning',
+        })
+        return
+      }
+
       setDeclared(true)
       setOpen(false)
       setNote('')
@@ -45,7 +56,7 @@ export function DeclareInterest({
         description: 'Ο διδάσκων θα ενημερωθεί για το ενδιαφέρον σου.',
         variant: 'success',
       })
-    }, 900)
+    })
   }
 
   if (declared) {
@@ -82,8 +93,8 @@ export function DeclareInterest({
             <Button variant="outline" onClick={() => setOpen(false)}>
               Άκυρο
             </Button>
-            <Button onClick={submit} disabled={submitting}>
-              {submitting ? 'Υποβολή...' : 'Υποβολή δήλωσης'}
+            <Button onClick={submit} disabled={pending}>
+              {pending ? 'Υποβολή...' : 'Υποβολή δήλωσης'}
             </Button>
           </>
         }

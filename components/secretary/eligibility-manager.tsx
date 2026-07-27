@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, UserPlus, UserMinus, CheckCircle2, XCircle, FileCheck2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,26 +21,36 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
-import { ELIGIBILITY_RULES, checkEligibility, formatDate, type StudentRecord } from '@/lib/data'
+import {
+  checkEligibility,
+  formatDate,
+  type EligibilityRules,
+  type StudentRecord,
+} from '@/lib/data'
+import { setManualOverride } from '@/lib/actions/students'
 
 /**
  * Διαχείριση δικαιούχων φοιτητών. Όταν δεν υπάρχει διασύνδεση με το
  * φοιτητολόγιο, η γραμματεία μπορεί να προσθέσει χειροκίνητα φοιτητές
  * στη λίστα όσων επιτρέπεται να δηλώσουν διπλωματική.
  */
-export function EligibilityManager({ students }: { students: StudentRecord[] }) {
+export function EligibilityManager({
+  students,
+  rules,
+}: {
+  students: StudentRecord[]
+  rules: EligibilityRules
+}) {
   const { toast } = useToast()
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
 
+  // Καμία τοπική επικάλυψη: το manualOverride έρχεται από τη βάση.
   const rows = useMemo(
-    () =>
-      students.map((student) => {
-        const record = { ...student, manualOverride: overrides[student.am] ?? student.manualOverride }
-        return { record, check: checkEligibility(record) }
-      }),
-    [students, overrides],
+    () => students.map((record) => ({ record, check: checkEligibility(record, rules) })),
+    [students, rules],
   )
 
   const counts = {
@@ -60,13 +71,22 @@ export function EligibilityManager({ students }: { students: StudentRecord[] }) 
   })
 
   function toggle(record: StudentRecord, next: boolean) {
-    setOverrides((prev) => ({ ...prev, [record.am]: next }))
-    toast({
-      title: next ? 'Ο φοιτητής προστέθηκε' : 'Η χειροκίνητη έγκριση αφαιρέθηκε',
-      description: next
-        ? `Ο/Η ${record.name} μπορεί πλέον να δηλώσει διπλωματική.`
-        : `Ισχύουν ξανά οι αυτόματοι έλεγχοι για τον/την ${record.name}.`,
-      variant: next ? 'success' : 'info',
+    startTransition(async () => {
+      const result = await setManualOverride(record.am, next)
+
+      if (!result.ok) {
+        toast({ title: 'Η αλλαγή απέτυχε', description: result.error, variant: 'warning' })
+        return
+      }
+
+      toast({
+        title: next ? 'Ο φοιτητής προστέθηκε' : 'Η χειροκίνητη έγκριση αφαιρέθηκε',
+        description: next
+          ? `Ο/Η ${record.name} μπορεί πλέον να δηλώσει διπλωματική.`
+          : `Ισχύουν ξανά οι αυτόματοι έλεγχοι για τον/την ${record.name}.`,
+        variant: next ? 'success' : 'info',
+      })
+      router.refresh()
     })
   }
 
@@ -74,8 +94,8 @@ export function EligibilityManager({ students }: { students: StudentRecord[] }) 
     <div className="space-y-5">
       <Notice variant="info" title="Προϋποθέσεις ανάληψης διπλωματικής">
         Δικαίωμα δήλωσης έχουν οι φοιτητές που βρίσκονται τουλάχιστον στο{' '}
-        {ELIGIBILITY_RULES.minYear}ο έτος, οφείλουν έως {ELIGIBILITY_RULES.maxOwedCourses} μαθήματα
-        και έχουν συγκεντρώσει {ELIGIBILITY_RULES.minCredits} ECTS. Όπου δεν υπάρχει διασύνδεση με
+        {rules.minYear}ο έτος, οφείλουν έως {rules.maxOwedCourses} μαθήματα
+        και έχουν συγκεντρώσει {rules.minCredits} ECTS. Όπου δεν υπάρχει διασύνδεση με
         το φοιτητολόγιο, η γραμματεία προσθέτει χειροκίνητα δικαιούχους.
       </Notice>
 
@@ -142,7 +162,7 @@ export function EligibilityManager({ students }: { students: StudentRecord[] }) 
                 <TableCell
                   className={cn(
                     'tabular-nums',
-                    record.owedCourses > ELIGIBILITY_RULES.maxOwedCourses
+                    record.owedCourses > rules.maxOwedCourses
                       ? 'font-medium text-destructive'
                       : 'text-muted-foreground',
                   )}
@@ -183,12 +203,12 @@ export function EligibilityManager({ students }: { students: StudentRecord[] }) 
                 </TableCell>
                 <TableCell className="text-right">
                   {record.manualOverride ? (
-                    <Button variant="ghost" size="sm" onClick={() => toggle(record, false)}>
+                    <Button variant="ghost" size="sm" disabled={pending} onClick={() => toggle(record, false)}>
                       <UserMinus className="size-3.5" />
                       Αφαίρεση
                     </Button>
                   ) : !check.eligible ? (
-                    <Button variant="outline" size="sm" onClick={() => toggle(record, true)}>
+                    <Button variant="outline" size="sm" disabled={pending} onClick={() => toggle(record, true)}>
                       <UserPlus className="size-3.5" />
                       Προσθήκη
                     </Button>

@@ -48,25 +48,50 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 
 ### Α. Ανάπτυξη
 
-**Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5). Package manager: **npm** — το
-`package-lock.json` είναι το μοναδικό lockfile. Το Docker Desktop θα χρειαστεί μόλις
-προστεθούν τα backing services.
+**Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5) και **Docker Desktop σε λειτουργία**.
+Package manager: **npm** — το `package-lock.json` είναι το μοναδικό lockfile.
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env       # PowerShell: Copy-Item .env.example .env
+npm run db:migrate         # δημιουργία σχήματος
+npm run db:seed            # δεδομένα επίδειξης
+npm run dev                # σηκώνει PostgreSQL + εφαρμογή
 ```
 
-Άνοιξε το [http://localhost:3000](http://localhost:3000). Δεν απαιτούνται μεταβλητές
-περιβάλλοντος — δεν υπάρχει ακόμη εξωτερική υπηρεσία.
+Άνοιξε το [http://localhost:3000](http://localhost:3000).
+
+Το `npm run dev` σηκώνει **πρώτα την PostgreSQL** (`docker compose up -d --wait postgres`)
+και περιμένει να περάσει το healthcheck πριν ξεκινήσει το `next dev` — δεν χρειάζεται
+ξεχωριστό βήμα, ούτε να θυμάσαι ποιο container λείπει.
 
 Η εφαρμογή τρέχει **native, όχι σε container** — δες [Γιατί έτσι](#γιατί-έτσι) παρακάτω.
-Μόλις προστεθούν PostgreSQL/Keycloak/MinIO, το βήμα γίνεται:
+Η βάση όμως τρέχει σε container: δεν χρειάζεται να εγκαταστήσεις PostgreSQL.
 
-```bash
-docker compose up -d    # backing services στο παρασκήνιο
-npm run dev             # η εφαρμογή από πάνω τους
-```
+### Βάση δεδομένων
+
+| Εντολή | Περιγραφή |
+|---|---|
+| `npm run db:generate` | Παράγει SQL migration από αλλαγές στο [`lib/db/schema.ts`](lib/db/schema.ts) |
+| `npm run db:migrate` | Εφαρμόζει τα migrations |
+| `npm run db:seed` | Γεμίζει τη βάση από το [`lib/data.ts`](lib/data.ts) (idempotent) |
+| `npm run db:studio` | Drizzle Studio — περιήγηση στα δεδομένα |
+
+Μηδενισμός από την αρχή: `docker compose down -v` και ξανά από το `db:migrate`.
+
+**Καμία σελίδα δεν κρατάει δεδομένα σε τοπικό state.** Όλες διαβάζουν τη βάση σε κάθε
+request (`export const dynamic = 'force-dynamic'` στα layouts των ρόλων) και οι Server
+Actions καλούν `router.refresh()` μετά από κάθε εγγραφή. Για τις αλλαγές που *δεν* κάνει
+ο ίδιος ο χρήστης — άλλος ρόλος σε άλλη καρτέλα, ή απευθείας επεξεργασία στο Drizzle
+Studio — το [`components/shell/live-data.tsx`](components/shell/live-data.tsx) κάνει
+refresh ανά 10s όσο η καρτέλα είναι ορατή, και αμέσως μόλις πάρει focus.
+
+> Αν βλέπεις παλιά δεδομένα ενώ τρέχεις σε container, το image είναι παλιό:
+> `npm run docker:prod` για ξαναχτίσιμο. Το `next build` προ-αποδίδει ό,τι δεν είναι
+> ρητά δυναμικό, οπότε ένα ξεχασμένο container σερβίρει στιγμιότυπο της ώρας του build.
+
+> Τα migrations είναι **ξεχωριστό ρητό βήμα** — η εφαρμογή δεν τα τρέχει ποτέ στο boot.
+> Τα παραγόμενα αρχεία SQL ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
 
 ### Β. Απλή εκτέλεση
 
@@ -96,7 +121,8 @@ docker compose -f docker-compose.dev.yml up --build
 
 | Εντολή | Περιγραφή |
 |---|---|
-| `npm run dev` | Development server, native, με hot reload |
+| `npm run dev` | PostgreSQL (container) + development server (native) με hot reload |
+| `npm run db:up` | Μόνο η PostgreSQL, χωρίς την εφαρμογή |
 | `npm run build` | Production build |
 | `npm start` | Εκτέλεση του production build |
 | `npm run docker:prod` | Τα πάντα σε containers (διαδρομή Β) |
@@ -129,17 +155,25 @@ container της εφαρμογής μόνο όταν ζητηθεί ρητά. �
 
 ## Ρόλοι
 
-Η αρχική σελίδα λειτουργεί ως **επιλογέας ρόλου**. Δεν υπάρχει login· διαλέγεις ρόλο και
-μπαίνεις στο αντίστοιχο dashboard. Η εναλλαγή γίνεται από το «Αλλαγή ρόλου» στο sidebar.
+Η αρχική σελίδα λειτουργεί ως **επιλογέας ρόλου και ταυτότητας**. Δεν υπάρχει πραγματικό
+login: διαλέγεις ποιος φοιτητής και ποιος διδάσκων είσαι από τα δύο dropdown —
+συμπληρωμένα από τη βάση, όχι από σταθερές — και μπαίνεις στο αντίστοιχο dashboard. Η
+εναλλαγή γίνεται από το «Αλλαγή ρόλου» στο sidebar ή το «Αλλαγή χρήστη» στο μενού προφίλ.
 
-| Ρόλος | Διαδρομή | Περσόνα | Τι κάνει |
+| Ρόλος | Διαδρομή | Ταυτότητα | Τι κάνει |
 |---|---|---|---|
-| Φοιτητής | `/student` | Ελένη Παπαδοπούλου (ΑΜ 3180142) | Αναζήτηση θεμάτων, δηλώσεις, υποβολή κειμένου, προβολή βαθμού |
-| Διδάσκων | `/professor` | Δρ. Γεώργιος Αντωνίου | Θέματα, ανάθεση φοιτητή, ορισμός τριμελούς, **αξιολογήσεις**, τροποποιήσεις |
-| Γραμματεία | `/secretary` | Γραμματεία Τμήματος | Εποπτεία, δικαιούχοι φοιτητές, εγκρίσεις, CSV |
+| Φοιτητής | `/student` | επιλέξιμη, 7 φοιτητές | Αναζήτηση θεμάτων, δηλώσεις, υποβολή κειμένου, προβολή βαθμού |
+| Διδάσκων | `/professor` | επιλέξιμη, 5 διδάσκοντες | Θέματα, ανάθεση φοιτητή, ορισμός τριμελούς, **αξιολογήσεις**, τροποποιήσεις |
+| Γραμματεία | `/secretary` | σταθερή περσόνα | Εποπτεία, δικαιούχοι φοιτητές, εγκρίσεις, CSV |
 
-Οι περσόνες ορίζονται ως `CURRENT_STUDENT` και `CURRENT_PROFESSOR` στο `lib/data.ts` — θα
-αντικατασταθούν από τη συνεδρία του SSO.
+Η επιλογή αποθηκεύεται σε **httpOnly cookie** και διαβάζεται από το
+[`lib/session.ts`](lib/session.ts) — τόσο στα Server Components (τι βλέπεις) όσο και στα
+Server Actions (ποιος γράφει στη βάση). Το `signIn` δέχεται μόνο ονόματα που υπάρχουν στο
+μητρώο, οπότε χειροποίητο cookie δεν σε κάνει κάποιον άλλον.
+
+> Είναι σκαλωσιά για δοκιμές, όχι ταυτοποίηση: όποιος φτάσει στη σελίδα διαλέγει ό,τι θέλει.
+> Αντικαθίσταται από το Keycloak, όπου η αναζήτηση γίνεται με `users.keycloak_sub` αντί για
+> ονοματεπώνυμο (PROJECT_SPEC §12 βήμα 6).
 
 > **Η τριμελής επιτροπή δεν είναι ρόλος.** Ένα μέλος επιτροπής *είναι* διδάσκων· η ιδιότητα
 > προκύπτει ανά διπλωματική από τη σύνθεση της επιτροπής, όχι από τον λογαριασμό. Γι' αυτό οι
@@ -184,17 +218,24 @@ container της εφαρμογής μόνο όταν ζητηθεί ρητά. �
 app/                    App Router — μία υποδιαδρομή ανά ρόλο
 components/
 ├── ui/                 primitives (Button, Card, Select, Dialog, Table, …)
-├── shell/              DashboardShell + διαμόρφωση πλοήγησης
+├── shell/              DashboardShell, πλοήγηση, LiveData (auto-refresh)
 ├── grading/            φόρμα βαθμολόγησης, σύνοψη, παρατηρήσεις
 ├── student/  professor/  secretary/    feature components ανά ρόλο
 lib/
-├── data.ts             domain types, mock data, business logic
+├── db/
+│   ├── schema.ts       ορισμός πινάκων (Drizzle) — η μοναδική πηγή αλήθειας
+│   ├── queries.ts      read layer· ό,τι διαβάζουν τα Server Components
+│   ├── seed.ts         γέμισμα της βάσης από το data.ts (idempotent)
+│   └── migrations/     παραγόμενα SQL, σε code review
+├── actions/            Server Actions — η μοναδική διαδρομή εγγραφής
+├── session.ts          ποιος είναι ο συνδεδεμένος χρήστης (cookie· προσωρινό)
+├── data.ts             domain types, σταθερές UI, business logic, seed source
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
 
 Dockerfile              multi-stage: deps → dev → builder → runner
-docker-compose.yml      backing services + η εφαρμογή πίσω από profile "app"
-docker-compose.dev.yml  εφαρμογή σε container με hot reload (διαδρομή Γ)
+docker-compose.yml      PostgreSQL + η εφαρμογή πίσω από profile "app"
+docker-compose.dev.yml  PostgreSQL + εφαρμογή σε container με hot reload (διαδρομή Γ)
 .dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```
 

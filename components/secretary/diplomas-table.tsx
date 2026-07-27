@@ -18,11 +18,12 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { downloadCsv } from '@/lib/utils'
 import {
-  PROFESSORS,
+  type Professor,
   STATUS_META,
-  finalGradeFor,
+  finalGradeOf,
   formatDate,
-  gradesFor,
+  gradesOf,
+  type Grade,
   type DiplomaStatus,
   type Topic,
 } from '@/lib/data'
@@ -30,7 +31,15 @@ import {
 const STATUS_OPTIONS: DiplomaStatus[] = ['assigned', 'review', 'completed']
 
 /** FR-A1 / FR-A2 — προβολή όλων των διπλωματικών με φίλτρα και εξαγωγή CSV. */
-export function DiplomasTable({ topics }: { topics: Topic[] }) {
+export function DiplomasTable({
+  topics,
+  professors,
+  allGrades,
+}: {
+  topics: Topic[]
+  professors: Professor[]
+  allGrades: Grade[]
+}) {
   const { toast } = useToast()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
@@ -84,8 +93,8 @@ export function DiplomasTable({ topics }: { topics: Topic[] }) {
         topic.professor,
         (topic.committee ?? []).join(' | '),
         STATUS_META[topic.status].label,
-        `${gradesFor(topic.id).length}/3`,
-        (topic.grade ?? finalGradeFor(topic.id))?.toFixed(1) ?? '',
+        `${gradesOf(allGrades, topic.id).length}/3`,
+        (topic.grade ?? finalGradeOf(allGrades, topic.id))?.toFixed(1) ?? '',
         topic.deadline ?? '',
       ]),
     )
@@ -135,7 +144,7 @@ export function DiplomasTable({ topics }: { topics: Topic[] }) {
               aria-label="Επιβλέπων"
               items={[
                 { value: 'all', label: 'Όλοι οι διδάσκοντες' },
-                ...PROFESSORS.map((p) => ({ value: p.name, label: p.name })),
+                ...professors.map((p) => ({ value: p.name, label: p.name })),
               ]}
             />
             <Select
@@ -188,7 +197,7 @@ export function DiplomasTable({ topics }: { topics: Topic[] }) {
           </TableHead>
           <TableBody>
             {filtered.map((topic) => {
-              const final = topic.grade ?? finalGradeFor(topic.id)
+              const final = topic.grade ?? finalGradeOf(allGrades, topic.id)
               return (
                 <TableRow key={topic.id}>
                   <TableCell className="font-medium text-muted-foreground">{topic.id}</TableCell>
@@ -206,7 +215,7 @@ export function DiplomasTable({ topics }: { topics: Topic[] }) {
                     {topic.professor}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {gradesFor(topic.id).length}/3
+                    {gradesOf(allGrades, topic.id).length}/3
                   </TableCell>
                   <TableCell>
                     {final != null ? (

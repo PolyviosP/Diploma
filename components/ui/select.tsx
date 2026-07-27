@@ -38,6 +38,13 @@ export function Select({
       items={items}
       value={value}
       disabled={disabled}
+      // Το Base UI ανοίγει το select σε modal κατάσταση by default: κλειδώνει το
+      // scroll της σελίδας γράφοντας overflow/scrollbar-gutter στο <html> και
+      // στο <body>, και τα ξεγράφει στο κλείσιμο. Αυτές οι εγγραφές στη ρίζα
+      // ακυρώνουν το layout ολόκληρου του εγγράφου ακριβώς πάνω στο animation
+      // κλεισίματος — από εκεί ερχόταν το «κόλλημα». Ένα dropdown φόρμας δεν
+      // χρειάζεται modal συμπεριφορά.
+      modal={false}
       onValueChange={(next) => onValueChange(next as string)}
     >
       <SelectPrimitive.Trigger
@@ -66,9 +73,20 @@ export function Select({
           <SelectPrimitive.Popup
             className={cn(
               'max-h-[min(20rem,var(--available-height))] min-w-[var(--anchor-width)] overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none',
-              'origin-[var(--transform-origin)] transition-[opacity,transform] duration-150',
+              // Μεταβαίνει `scale`, ΟΧΙ `transform`: το Tailwind v4 παράγει για το
+              // `scale-95` την αυτόνομη ιδιότητα `scale`, που το `transition-property:
+              // transform` δεν την πιάνει. Έτσι η κλίμακα «πηδούσε» ακαριαία αντί να
+              // κινείται — αόρατο στο άνοιγμα (γίνεται πίσω από opacity 0), εμφανές
+              // στο κλείσιμο ως τίναγμα πριν το σβήσιμο.
+              //
+              // Και `ease-out` αντί για την προεπιλογή `cubic-bezier(0.4, 0, 0.2, 1)`,
+              // που ξεκινά με μηδενική ταχύτητα και καθυστερεί την αντίδραση.
+              'origin-[var(--transform-origin)] will-change-[opacity,scale]',
+              'transition-[opacity,scale] duration-150 ease-out',
               'data-[starting-style]:scale-95 data-[starting-style]:opacity-0',
-              'data-[ending-style]:scale-95 data-[ending-style]:opacity-0',
+              // Το κλείσιμο θέλει να είναι πιο γρήγορο από το άνοιγμα: μόλις
+              // διαλέξεις, η δουλειά έγινε και το popup απλώς φεύγει από τη μέση.
+              'data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[ending-style]:duration-100',
             )}
           >
             {items.map((item) => (

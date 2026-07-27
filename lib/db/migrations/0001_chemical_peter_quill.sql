@@ -1,0 +1,1 @@
+ALTER TABLE "diplomas" ADD COLUMN "document_size" text;

@@ -16,36 +16,41 @@ import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { TopicCard } from '@/components/topic-card'
 import { ChangeRequestCard } from '@/components/student/change-request-card'
+import { MAX_ACTIVE_APPLICATIONS, STATUS_META, checkEligibility, formatDate } from '@/lib/data'
 import {
-  APPLICATIONS,
-  CHANGE_REQUESTS,
-  CURRENT_STUDENT,
-  MAX_ACTIVE_APPLICATIONS,
-  ROLE_META,
-  STATUS_META,
-  TOPICS,
-  checkEligibility,
-  formatDate,
-  studentByName,
-} from '@/lib/data'
+  getAllTopics,
+  getApplications,
+  getChangeRequests,
+  getStudentByName,
+  getEligibilityRules,
+} from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
-export default function StudentDashboard() {
-  const meta = ROLE_META.student
-  const record = studentByName(CURRENT_STUDENT)
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
+export default async function StudentDashboard() {
+  const me = await currentStudent()
 
-  const myDiploma = TOPICS.find((t) => t.student === CURRENT_STUDENT)
-  const myApplications = APPLICATIONS.filter((a) => a.student === CURRENT_STUDENT)
+  const [record, allTopics, allApplications, allRequests, rules] = await Promise.all([
+    getStudentByName(me),
+    getAllTopics(),
+    getApplications(),
+    getChangeRequests(),
+    getEligibilityRules(),
+  ])
+
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
+
+  const myDiploma = allTopics.find((t) => t.student === me)
+  const myApplications = allApplications.filter((a) => a.student === me)
   const activeApplications = myApplications.filter((a) => a.status === 'pending')
-  const available = TOPICS.filter((t) => t.status === 'available')
-  const pendingChangeRequest = CHANGE_REQUESTS.find(
-    (r) => r.student === CURRENT_STUDENT && r.status === 'pending_student',
+  const available = allTopics.filter((t) => t.status === 'available')
+  const pendingChangeRequest = allRequests.find(
+    (r) => r.student === me && r.status === 'pending_student',
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Καλωσόρισες, ${meta.person.split(' ')[0]}`}
+        title={`Καλωσόρισες, ${me.split(' ')[0]}`}
         description="Παρακολούθησε την πορεία της διπλωματικής σου και ανακάλυψε νέα θέματα."
       >
         <Button render={<Link href="/student/topics" />}>

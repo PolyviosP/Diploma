@@ -147,9 +147,8 @@ export const ROLE_META: Record<
   },
 }
 
-/** Τρέχουσες περσόνες του πρωτοτύπου (θα προέρχονται από το SSO). */
-export const CURRENT_STUDENT = ROLE_META.student.person
-export const CURRENT_PROFESSOR = ROLE_META.professor.person
+// Ο τρέχων χρήστης δεν είναι πια σταθερά: επιλέγεται στη σύνδεση και διαβάζεται
+// από το lib/session.ts. Οι περσόνες του ROLE_META μένουν ως προεπιλογές.
 
 /* -------------------------------------------------------------------------- */
 /*  Διδάσκοντες                                                                 */
@@ -629,6 +628,21 @@ export function finalGradeFor(topicId: string): number | null {
   return round1(list.reduce((sum, g) => sum + g.score, 0) / list.length)
 }
 
+/**
+ * Ίδια λογική με τα `gradesFor` / `finalGradeFor`, αλλά πάνω σε βαθμούς που
+ * δίνονται ως παράμετρος — για χρήση με τα δεδομένα της βάσης αντί του mock.
+ */
+export function gradesOf(all: Grade[], topicId: string) {
+  return all.filter((g) => g.topicId === topicId)
+}
+
+/** BR-7 — τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
+export function finalGradeOf(all: Grade[], topicId: string): number | null {
+  const list = gradesOf(all, topicId)
+  if (list.length < 3) return null
+  return round1(list.reduce((sum, g) => sum + g.score, 0) / list.length)
+}
+
 export function weightedScore(criteria: GradeCriteria) {
   return round1(CRITERIA.reduce((sum, c) => sum + criteria[c.key] * c.weight, 0))
 }
@@ -762,6 +776,8 @@ export type StudentRecord = {
   gpa: number
   /** Χειροκίνητη προσθήκη από τη γραμματεία (override φοιτητολογίου). */
   manualOverride: boolean
+  phone?: string
+  address?: string
   transcript?: { name: string; uploadedAt: string }
 }
 
@@ -855,23 +871,35 @@ export type EligibilityCheck = {
 }
 
 /** Έλεγχος προϋποθέσεων — επιστρέφει και τους λόγους αποτυχίας για το UI. */
-export function checkEligibility(student: StudentRecord): EligibilityCheck {
+export type EligibilityRules = {
+  minYear: number
+  maxOwedCourses: number
+  minCredits: number
+}
+
+/**
+ * Οι κανόνες περνιούνται ρητά ως παράμετρος — διαβάζονται από τον πίνακα
+ * `eligibility_rules` και είναι παραμετροποιήσιμοι από τη γραμματεία, οπότε δεν
+ * επιτρέπεται να διαβαστούν από σταθερά του κώδικα.
+ */
+export function checkEligibility(
+  student: StudentRecord,
+  rules: EligibilityRules,
+): EligibilityCheck {
   if (student.manualOverride) return { eligible: true, reasons: [] }
   const reasons: string[] = []
-  if (student.year < ELIGIBILITY_RULES.minYear) {
+  if (student.year < rules.minYear) {
     reasons.push(
-      `Απαιτείται φοίτηση τουλάχιστον στο ${ELIGIBILITY_RULES.minYear}ο έτος (τρέχον: ${student.year}ο).`,
+      `Απαιτείται φοίτηση τουλάχιστον στο ${rules.minYear}ο έτος (τρέχον: ${student.year}ο).`,
     )
   }
-  if (student.owedCourses > ELIGIBILITY_RULES.maxOwedCourses) {
+  if (student.owedCourses > rules.maxOwedCourses) {
     reasons.push(
-      `Οφείλονται ${student.owedCourses} μαθήματα — το ανώτατο όριο είναι ${ELIGIBILITY_RULES.maxOwedCourses}.`,
+      `Οφείλονται ${student.owedCourses} μαθήματα — το ανώτατο όριο είναι ${rules.maxOwedCourses}.`,
     )
   }
-  if (student.credits < ELIGIBILITY_RULES.minCredits) {
-    reasons.push(
-      `Απαιτούνται ${ELIGIBILITY_RULES.minCredits} ECTS (τρέχοντα: ${student.credits}).`,
-    )
+  if (student.credits < rules.minCredits) {
+    reasons.push(`Απαιτούνται ${rules.minCredits} ECTS (τρέχοντα: ${student.credits}).`)
   }
   return { eligible: reasons.length === 0, reasons }
 }

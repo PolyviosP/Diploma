@@ -15,14 +15,20 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from '@/components/shell/nav-config'
+import { LiveData } from '@/components/shell/live-data'
 import { ROLE_META, NOTIFICATIONS, type Role } from '@/lib/data'
 import { Avatar } from '@/components/ui/avatar'
 
 export function DashboardShell({
   role,
+  person,
+  detail,
   children,
 }: {
   role: Role
+  /** Ο συνδεδεμένος χρήστης· έρχεται από το layout που διαβάζει τη συνεδρία. */
+  person: string
+  detail: string
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -97,6 +103,8 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-background">
+      <LiveData />
+
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-sidebar lg:block">
         {SidebarContent}
@@ -209,9 +217,9 @@ export function DashboardShell({
                 }}
                 className="flex items-center gap-2 rounded-lg p-1 pl-1 pr-2 transition-colors hover:bg-muted"
               >
-                <Avatar name={meta.person} />
+                <Avatar name={person} />
                 <span className="hidden text-left sm:block">
-                  <span className="block text-sm font-medium leading-tight">{meta.person}</span>
+                  <span className="block text-sm font-medium leading-tight">{person}</span>
                   <span className="block text-xs text-muted-foreground">{meta.label}</span>
                 </span>
                 <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
@@ -219,8 +227,8 @@ export function DashboardShell({
               {profileOpen ? (
                 <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-border bg-popover shadow-lg animate-in fade-in slide-in-from-top-1">
                   <div className="border-b border-border px-4 py-3">
-                    <p className="text-sm font-semibold text-popover-foreground">{meta.person}</p>
-                    <p className="text-xs text-muted-foreground">{meta.detail}</p>
+                    <p className="text-sm font-semibold text-popover-foreground">{person}</p>
+                    <p className="text-xs text-muted-foreground">{detail}</p>
                   </div>
                   <div className="p-1">
                     <Link
@@ -228,7 +236,7 @@ export function DashboardShell({
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-muted"
                     >
                       <LogOut className="size-4" />
-                      Αποσύνδεση
+                      Αλλαγή χρήστη
                     </Link>
                   </div>
                 </div>

@@ -12,27 +12,36 @@ import { StatCard } from '@/components/ui/stat-card'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge, StatusBadge, ChangeRequestBadge } from '@/components/ui/badge'
+import { checkEligibility, finalGradeOf, formatDate, round1 } from '@/lib/data'
 import {
-  CHANGE_REQUESTS,
-  STUDENTS,
-  TOPICS,
-  checkEligibility,
-  finalGradeFor,
-  formatDate,
-  round1,
-} from '@/lib/data'
+  getAllTopics,
+  getChangeRequests,
+  getGrades,
+  getStudentRecords,
+  getEligibilityRules,
+} from '@/lib/db/queries'
 
-export default function SecretaryDashboard() {
-  const assigned = TOPICS.filter((t) => t.student)
+export default async function SecretaryDashboard() {
+  const [allTopics, allRequests, allStudents, allGrades, rules] = await Promise.all([
+    getAllTopics(),
+    getChangeRequests(),
+    getStudentRecords(),
+    getGrades(),
+    getEligibilityRules(),
+  ])
+
+  const assigned = allTopics.filter((t) => t.student)
   const inProgress = assigned.filter((t) => t.status === 'assigned' || t.status === 'review')
   const completed = assigned.filter((t) => t.status === 'completed')
-  const pendingRequests = CHANGE_REQUESTS.filter((r) => r.status === 'pending_secretary')
-  const eligible = STUDENTS.filter((s) => checkEligibility(s).eligible)
+  const pendingRequests = allRequests.filter((r) => r.status === 'pending_secretary')
+  const eligible = allStudents.filter((s) => checkEligibility(s, rules).eligible)
 
   const averageGrade = completed.length
     ? round1(
-        completed.reduce((sum, t) => sum + (t.grade ?? finalGradeFor(t.id) ?? 0), 0) /
-          completed.length,
+        completed.reduce(
+          (sum, t) => sum + (t.grade ?? finalGradeOf(allGrades, t.id) ?? 0),
+          0,
+        ) / completed.length,
       )
     : null
 
@@ -73,7 +82,7 @@ export default function SecretaryDashboard() {
         />
         <StatCard
           label="Δικαιούχοι φοιτητές"
-          value={`${eligible.length}/${STUDENTS.length}`}
+          value={`${eligible.length}/${allStudents.length}`}
           icon={UserCheck}
           hint="Πληρούν τις προϋποθέσεις"
         />
@@ -90,7 +99,7 @@ export default function SecretaryDashboard() {
           </CardHeader>
           <CardContent className="divide-y divide-border">
             {assigned.map((topic) => {
-              const final = topic.grade ?? finalGradeFor(topic.id)
+              const final = topic.grade ?? finalGradeOf(allGrades, topic.id)
               return (
                 <div
                   key={topic.id}

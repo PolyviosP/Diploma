@@ -6,11 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { GradeProgress } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, TOPICS, finalGradeFor, formatDate } from '@/lib/data'
+import { finalGradeOf, formatDate } from '@/lib/data'
+import { getAllTopics, getGrades } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
-export default function ProfessorDiplomasPage() {
-  const supervised = TOPICS.filter(
-    (t) => t.professor === CURRENT_PROFESSOR && Boolean(t.student),
+export default async function ProfessorDiplomasPage() {
+  const me = await currentProfessor()
+  const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
+  const supervised = allTopics.filter(
+    (t) => t.professor === me && Boolean(t.student),
   )
 
   return (
@@ -34,7 +38,7 @@ export default function ProfessorDiplomasPage() {
       ) : (
         <div className="grid gap-4">
           {supervised.map((topic) => {
-            const final = topic.grade ?? finalGradeFor(topic.id)
+            const final = topic.grade ?? finalGradeOf(allGrades, topic.id)
             return (
               <Card key={topic.id} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -99,7 +103,7 @@ export default function ProfessorDiplomasPage() {
                 ) : null}
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-                  <GradeProgress topicId={topic.id} />
+                  <GradeProgress topicId={topic.id} allGrades={allGrades} />
                   <Button
                     variant="outline"
                     size="sm"

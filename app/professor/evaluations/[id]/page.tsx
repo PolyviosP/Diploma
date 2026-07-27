@@ -13,26 +13,26 @@ import {
   GradeProgress,
   FinalGradeBlock,
 } from '@/components/grading/grade-summary'
-import {
-  ANNOTATIONS,
-  CURRENT_PROFESSOR,
-  GRADES,
-  TOPICS,
-  formatDate,
-} from '@/lib/data'
+import { formatDate } from '@/lib/data'
+import { getAnnotationsFor, getGradesFor, getTopicById } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function CommitteeEvaluationPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const me = await currentProfessor()
   const { id } = await params
-  const topic = TOPICS.find((t) => t.id === id)
-  if (!topic || !topic.committee?.includes(CURRENT_PROFESSOR)) notFound()
+  const topic = await getTopicById(id)
+  if (!topic || !topic.committee?.includes(me)) notFound()
 
-  const myGrade = GRADES.find(
-    (g) => g.topicId === topic.id && g.professor === CURRENT_PROFESSOR,
-  )
+  const [topicGrades, topicAnnotations] = await Promise.all([
+    getGradesFor(topic.id),
+    getAnnotationsFor(topic.id),
+  ])
+
+  const myGrade = topicGrades.find((g) => g.professor === me)
   // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
   const canGrade =
     Boolean(topic.document) && Boolean(topic.presentedAt) && topic.status !== 'completed'
@@ -82,11 +82,17 @@ export default async function CommitteeEvaluationPage({
 
           <DocumentCard topic={topic} />
 
-          <GradeForm existing={myGrade} canGrade={canGrade} blockedReason={blockedReason} />
+          <GradeForm
+            topicId={topic.id}
+            existing={myGrade}
+            canGrade={canGrade}
+            blockedReason={blockedReason}
+          />
 
           <AnnotationsPanel
-            annotations={ANNOTATIONS.filter((a) => a.topicId === topic.id)}
-            author={CURRENT_PROFESSOR}
+            topicId={topic.id}
+            annotations={topicAnnotations}
+            author={me}
             readOnly={topic.status === 'completed'}
           />
         </div>
@@ -156,7 +162,7 @@ export default async function CommitteeEvaluationPage({
                     <Avatar name={member} className="size-8" />
                     <span className="truncate text-sm">
                       {member}
-                      {member === CURRENT_PROFESSOR ? (
+                      {member === me ? (
                         <span className="ml-1 text-xs text-primary">(εσείς)</span>
                       ) : null}
                     </span>
@@ -165,7 +171,7 @@ export default async function CommitteeEvaluationPage({
                 </div>
               ))}
               <div className="border-t border-border pt-3">
-                <GradeProgress topicId={topic.id} />
+                <GradeProgress topicId={topic.id} allGrades={topicGrades} />
               </div>
             </CardContent>
           </Card>
@@ -175,8 +181,8 @@ export default async function CommitteeEvaluationPage({
               <CardTitle>Βαθμολογίες επιτροπής</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FinalGradeBlock topic={topic} />
-              <GradeBreakdown topicId={topic.id} showCriteria={false} />
+              <FinalGradeBlock topic={topic} allGrades={topicGrades} />
+              <GradeBreakdown topicId={topic.id} allGrades={topicGrades} showCriteria={false} />
             </CardContent>
           </Card>
         </div>

@@ -1,22 +1,26 @@
 import { PageHeader } from '@/components/ui/page'
 import { Notice } from '@/components/ui/notice'
 import { TopicSearch } from '@/components/student/topic-search'
+import { MAX_ACTIVE_APPLICATIONS, checkEligibility } from '@/lib/data'
 import {
-  APPLICATIONS,
-  CURRENT_STUDENT,
-  MAX_ACTIVE_APPLICATIONS,
-  TOPICS,
-  checkEligibility,
-  studentByName,
-} from '@/lib/data'
+  getApplicationsOf,
+  getAvailableTopics,
+  getStudentByName,
+  getEligibilityRules,
+} from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
-export default function StudentTopicsPage() {
-  const available = TOPICS.filter((t) => t.status === 'available')
-  const record = studentByName(CURRENT_STUDENT)
-  const eligibility = record ? checkEligibility(record) : { eligible: false, reasons: [] }
-  const activeApplications = APPLICATIONS.filter(
-    (a) => a.student === CURRENT_STUDENT && a.status === 'pending',
-  ).length
+export default async function StudentTopicsPage() {
+  const me = await currentStudent()
+  const [available, record, myApplications, rules] = await Promise.all([
+    getAvailableTopics(),
+    getStudentByName(me),
+    getApplicationsOf(me),
+    getEligibilityRules(),
+  ])
+
+  const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
+  const activeApplications = myApplications.filter((a) => a.status === 'pending').length
 
   return (
     <div className="space-y-6">
