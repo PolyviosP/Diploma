@@ -3,6 +3,9 @@ node_modules
 .git
 .gitignore
 *.tsbuildinfo
+# Τα containers παίρνουν τις ρυθμίσεις από το environment του compose, ποτέ από
+# αρχείο — έτσι κανένα .env δεν καταλήγει σε layer του image.
+.env
 .env*.local
 README.md
 PROJECT_SPEC.md

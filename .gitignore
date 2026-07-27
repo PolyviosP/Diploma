@@ -1,7 +1,8 @@
 # Environment variables
-.env
+#
+# Το .env είναι στο repo: περιέχει μόνο τα defaults ανάπτυξης, ώστε ένα clone να
+# τρέχει χωρίς βήμα αντιγραφής. Τα μυστικά πάνε σε .env.local, που μένει εκτός.
 .env*.local
-!.env.example
 
 # Common ignores
 node_modules

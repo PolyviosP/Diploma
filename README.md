@@ -96,13 +96,19 @@ Package manager: **npm** — το `package-lock.json` είναι το μοναδ
 
 ```bash
 npm install
-cp .env.example .env       # PowerShell: Copy-Item .env.example .env
 npm run db:migrate         # δημιουργία σχήματος
 npm run db:seed            # δεδομένα επίδειξης
 npm run dev                # σηκώνει PostgreSQL + εφαρμογή
 ```
 
 Άνοιξε το [http://localhost:3000](http://localhost:3000).
+
+Το [`.env`](.env) είναι **στο repo** — δεν αντιγράφεις τίποτα, δεν ρυθμίζεις τίποτα. Περιέχει
+μόνο τα defaults του compose (`postgresql://diploma:diploma@localhost:5432/diploma`), που δεν
+είναι μυστικά: η βάση ακούει μόνο τοπικά και ο κωδικός της χάνεται με ένα
+`docker compose down -v`. Για τοπική παράκαμψη ή για πραγματικά μυστικά — client secret του
+Keycloak, κλειδιά του MinIO — φτιάχνεις `.env.local`, που μένει εκτός git και έχει
+προτεραιότητα έναντι του `.env`.
 
 Το `npm run dev` σηκώνει **πρώτα την PostgreSQL** (`docker compose up -d --wait postgres`)
 και περιμένει να περάσει το healthcheck πριν ξεκινήσει το `next dev` — δεν χρειάζεται
@@ -417,7 +423,7 @@ profile**, ώστε να σηκώνονται με σκέτο `docker compose up
 - **Healthcheck** σε κάθε service + `depends_on: condition: service_healthy`
 - **Named volumes** για τα δεδομένα· μηδενισμός με `docker compose down -v`
 - **Ρυθμίσεις μόνο από environment** (`DATABASE_URL`, `KEYCLOAK_ISSUER`, `S3_ENDPOINT`),
-  με `.env.example` στο repo και `.env` στο gitignore
+  με τα defaults ανάπτυξης στο `.env` (στο repo) και τα μυστικά στο `.env.local` (εκτός)
 - **Το Keycloak realm ως κώδικας** — export σε JSON, import με `--import-realm`· καμία
   χειροκίνητη ρύθμιση από admin console
 - **Migrations ως ξεχωριστό ρητό βήμα**, ποτέ αυτόματα στο boot της εφαρμογής

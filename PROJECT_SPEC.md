@@ -510,7 +510,8 @@ Tokens στο [`app/globals.css`](app/globals.css) με `@theme inline`.
 - Server Components by default· `'use client'` μόνο όπου υπάρχει διάδραση
 - Ελληνικά strings στο UI, αγγλικά στον κώδικα
 - Κάθε write περνά από validation function
-- Χωρίς hardcoded credentials — μόνο env vars, με `.env.example` στο repo
+- Χωρίς hardcoded credentials — μόνο env vars: defaults ανάπτυξης στο `.env` (στο repo),
+  μυστικά στο `.env.local` (εκτός git) ή σε secret manager
 - Σχόλια στα ελληνικά όπου η λογική είναι business rule (με αναφορά στον κωδικό BR)
 - Το domain object λέγεται **Diploma**· ο όρος «thesis» δεν εμφανίζεται στον κώδικα
 
