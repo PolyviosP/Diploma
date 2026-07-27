@@ -127,19 +127,37 @@ refresh ανά 10s όσο η καρτέλα είναι ορατή, και αμέ
 > ρητά δυναμικό, οπότε ένα ξεχασμένο container σερβίρει στιγμιότυπο της ώρας του build.
 
 > Τα migrations είναι **ξεχωριστό ρητό βήμα** — η εφαρμογή δεν τα τρέχει ποτέ στο boot.
-> Τα παραγόμενα αρχεία SQL ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
+> Στην ανάπτυξη τα τρέχεις με `npm run db:migrate`· στη διαδρομή Β τα τρέχει το `migrate`
+> service, δικό του container που τερματίζει, ποτέ ο `server.js`. Τα παραγόμενα αρχεία SQL
+> ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
 
 ### Β. Απλή εκτέλεση
 
 Για επίδειξη, αξιολόγηση, ή έλεγχο ότι όλα δουλεύουν. **Χρειάζεται μόνο Docker Desktop** —
-ούτε Node, ούτε `npm install`, ούτε σωστή έκδοση runtime.
+ούτε Node, ούτε `npm install`, ούτε `.env`, ούτε σωστή έκδοση runtime.
 
 ```bash
 docker compose --profile app up --build
 ```
 
+Μία εντολή, τρία βήματα με τη σειρά:
+
+```
+postgres  ──healthy──▶  migrate  ──exit 0──▶  app
+(βάση)                  (σχήμα + δεδομένα)    (localhost:3000)
+```
+
+Το `migrate` είναι **one-shot container**: τρέχει `drizzle-kit migrate`, μετά το seed, και
+τερματίζει. Το `app` ξεκινά μόνο με `service_completed_successfully` — αν το σχήμα αποτύχει
+να στηθεί, δεν σηκώνεται καθόλου εφαρμογή αντί να εμφανιστεί σπασμένη.
+
 Το πρώτο build παίρνει μερικά λεπτά· τα επόμενα είναι cached. Τερματισμός με `Ctrl+C`
 ή `docker compose down`.
+
+> Το seed τρέχει με `--if-empty`: γεμίζει **μόνο άδεια βάση**. Σε επόμενα
+> `docker compose up` ό,τι έχεις καταχωρίσει από την εφαρμογή παραμένει — το `TRUNCATE`
+> του seed δεν εκτελείται. Επαναφορά στα δεδομένα επίδειξης παραμένει ρητή επιλογή:
+> `npm run db:seed` (χωρίς τη σημαία) ή `docker compose down -v`.
 
 ### Γ. Ανάπτυξη χωρίς εγκατεστημένο Node
 
@@ -269,8 +287,8 @@ lib/
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
 
-Dockerfile              multi-stage: deps → dev → builder → runner
-docker-compose.yml      PostgreSQL + η εφαρμογή πίσω από profile "app"
+Dockerfile              multi-stage: deps → dev → migrate → builder → runner
+docker-compose.yml      PostgreSQL + migrate + η εφαρμογή, πίσω από profile "app"
 docker-compose.dev.yml  PostgreSQL + εφαρμογή σε container με hot reload (διαδρομή Γ)
 .dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```

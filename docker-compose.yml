@@ -25,11 +25,37 @@ services:
       retries: 10
       start_period: 10s
 
+  # One-shot: τρέχει, κάνει τη δουλειά του, τερματίζει. Χωρίς αυτό η εφαρμογή σε
+  # καθαρό μηχάνημα βρίσκει άδεια βάση και κάθε σελίδα σκάει με «relation does
+  # not exist» — τα migrations έτρεχαν μέχρι τώρα μόνο χειροκίνητα από τον host.
+  #
+  # Στο profile "app" ώστε το καθημερινό `docker compose up -d` (μόνο η βάση) να
+  # μένει όπως ήταν· εκεί τα migrations τα τρέχεις με `npm run db:migrate`.
+  migrate:
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    image: diploma-migrate
+    container_name: diploma-migrate
+    # Δεν επανεκκινεί: ο τερματισμός είναι το επιθυμητό αποτέλεσμα, όχι σφάλμα.
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://diploma:diploma@postgres:5432/diploma
+
   app:
     profiles: ["app"]
     depends_on:
       postgres:
         condition: service_healthy
+      # Η εφαρμογή ξεκινά μόνο αφού το σχήμα υπάρχει. Αν το migrate αποτύχει,
+      # το compose δεν σηκώνει καθόλου την εφαρμογή αντί να τη δείξει σπασμένη.
+      migrate:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile

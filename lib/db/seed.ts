@@ -37,7 +37,25 @@ import {
 /** Το lib/data.ts δεν έχει τμήμα ανά διδάσκοντα — ένα τμήμα για όλους. */
 const DEPARTMENT = 'Τμήμα Πληροφορικής'
 
+/**
+ * Με `--if-empty` το seed τρέχει μόνο σε άδεια βάση.
+ *
+ * Το χρειάζεται το `migrate` service του compose: ξανατρέχει σε κάθε
+ * `docker compose up`, και χωρίς τον έλεγχο το TRUNCATE παρακάτω θα έσβηνε ό,τι
+ * έχει καταχωρίσει ο χρήστης από την εφαρμογή. Χειροκίνητα (`npm run db:seed`)
+ * η επαναφορά στα δεδομένα επίδειξης παραμένει ρητή επιλογή.
+ */
+const onlyIfEmpty = process.argv.includes('--if-empty')
+
 async function main() {
+  if (onlyIfEmpty) {
+    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(users)
+    if (row && row.n > 0) {
+      console.log(`→ Η βάση έχει ήδη ${row.n} χρήστες — το seed παραλείπεται (--if-empty).`)
+      return
+    }
+  }
+
   console.log('→ Καθαρισμός πινάκων…')
   // CASCADE: παρασύρει applications/diplomas/grades/… χωρίς να μας νοιάζει η σειρά.
   await db.execute(sql`

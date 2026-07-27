@@ -29,6 +29,24 @@ EXPOSE 3000
 # σηκώνει πρώτα την Postgres με docker compose, που μέσα σε container δεν υπάρχει.
 CMD ["npx", "next", "dev", "--webpack", "-H", "0.0.0.0"]
 
+# --- migrations -------------------------------------------------------------
+# One-shot service: εφαρμόζει τα migrations και, σε άδεια βάση, τα δεδομένα
+# επίδειξης. Ξεχωριστό stage γιατί το runtime image δεν έχει τίποτα από αυτά —
+# το standalone output του Next δεν κουβαλάει ούτε το drizzle-kit (devDependency)
+# ούτε τα .sql αρχεία, που δεν είναι imports για να τα εντοπίσει το tracing.
+#
+# Η αρχή «ποτέ migrations στο boot» τηρείται: τα τρέχει δικό του container που
+# τερματίζει, όχι ο server της εφαρμογής.
+FROM base AS migrate
+WORKDIR /app
+ENV NODE_ENV=development
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json drizzle.config.ts ./
+COPY lib ./lib
+# Το DATABASE_URL έρχεται από το environment του compose, γι' αυτό το tsx τρέχει
+# χωρίς --env-file: μέσα στο container δεν υπάρχει .env.
+CMD ["sh", "-c", "npx drizzle-kit migrate && npx tsx lib/db/seed.ts --if-empty"]
+
 # --- build ------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app

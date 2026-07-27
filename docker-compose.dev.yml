@@ -25,6 +25,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # Ίδιο one-shot service με το docker-compose.yml: χωρίς αυτό η διαδρομή Γ
+  # ξεκινά με άδεια βάση σε καθαρό μηχάνημα.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    image: diploma-migrate
+    container_name: diploma-migrate-dev
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-diploma}:${POSTGRES_PASSWORD:-diploma}@postgres:5432/${POSTGRES_DB:-diploma}
+
   app:
     build:
       context: .
@@ -35,6 +51,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     volumes:
