@@ -50,10 +50,46 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 
 ## Εκκίνηση
 
-Υπάρχουν δύο κοινά με διαφορετικές ανάγκες: όποιος **γράφει** κώδικα και όποιος θέλει
-απλώς να **τρέξει** το project. Διάλεξε ανάλογα.
+Υπάρχουν δύο κοινά με διαφορετικές ανάγκες: όποιος θέλει απλώς να **τρέξει** το project
+και όποιος **γράφει** κώδικα. Διάλεξε ανάλογα.
 
-### Α. Ανάπτυξη
+### Α. Απλή εκτέλεση — μία εντολή
+
+Για επίδειξη, αξιολόγηση, ή έλεγχο ότι όλα δουλεύουν. **Χρειάζεται μόνο Docker Desktop** —
+ούτε Node, ούτε `npm install`, ούτε `.env`, ούτε σωστή έκδοση runtime.
+
+```bash
+docker compose --profile app up --build
+```
+
+Άνοιξε το [http://localhost:3000](http://localhost:3000). Αν έχεις Node, το ίδιο πράγμα
+γράφεται συντομότερα:
+
+```bash
+npm run up      # ίδια εντολή, λιγότερη πληκτρολόγηση
+npm run down    # τερματισμός
+```
+
+Μία εντολή, τρία βήματα με τη σειρά:
+
+```
+postgres  ──healthy──▶  migrate  ──exit 0──▶  app
+(βάση)                  (σχήμα + δεδομένα)    (localhost:3000)
+```
+
+Το `migrate` είναι **one-shot container**: τρέχει `drizzle-kit migrate`, μετά το seed, και
+τερματίζει. Το `app` ξεκινά μόνο με `service_completed_successfully` — αν το σχήμα αποτύχει
+να στηθεί, δεν σηκώνεται καθόλου εφαρμογή αντί να εμφανιστεί σπασμένη.
+
+Το πρώτο build παίρνει μερικά λεπτά· τα επόμενα είναι cached. Τερματισμός με `Ctrl+C`
+ή `docker compose down`.
+
+> Το seed τρέχει με `--if-empty`: γεμίζει **μόνο άδεια βάση**. Σε επόμενα
+> `docker compose up` ό,τι έχεις καταχωρίσει από την εφαρμογή παραμένει — το `TRUNCATE`
+> του seed δεν εκτελείται. Επαναφορά στα δεδομένα επίδειξης παραμένει ρητή επιλογή:
+> `npm run db:seed` (χωρίς τη σημαία) ή `docker compose down -v`.
+
+### Β. Ανάπτυξη
 
 **Προϋπόθεση:** Node.js ≥ 20.9 (αναπτύχθηκε σε v24.5) και **Docker Desktop σε λειτουργία**.
 Package manager: **npm** — το `package-lock.json` είναι το μοναδικό lockfile.
@@ -123,49 +159,22 @@ Studio — το [`components/shell/live-data.tsx`](components/shell/live-data.ts
 refresh ανά 10s όσο η καρτέλα είναι ορατή, και αμέσως μόλις πάρει focus.
 
 > Αν βλέπεις παλιά δεδομένα ενώ τρέχεις σε container, το image είναι παλιό:
-> `npm run docker:prod` για ξαναχτίσιμο. Το `next build` προ-αποδίδει ό,τι δεν είναι
+> `npm run up` για ξαναχτίσιμο. Το `next build` προ-αποδίδει ό,τι δεν είναι
 > ρητά δυναμικό, οπότε ένα ξεχασμένο container σερβίρει στιγμιότυπο της ώρας του build.
 
 > Τα migrations είναι **ξεχωριστό ρητό βήμα** — η εφαρμογή δεν τα τρέχει ποτέ στο boot.
-> Στην ανάπτυξη τα τρέχεις με `npm run db:migrate`· στη διαδρομή Β τα τρέχει το `migrate`
+> Στην ανάπτυξη τα τρέχεις με `npm run db:migrate`· στη διαδρομή Α τα τρέχει το `migrate`
 > service, δικό του container που τερματίζει, ποτέ ο `server.js`. Τα παραγόμενα αρχεία SQL
 > ζουν στο `lib/db/migrations/` και μπαίνουν σε code review.
-
-### Β. Απλή εκτέλεση
-
-Για επίδειξη, αξιολόγηση, ή έλεγχο ότι όλα δουλεύουν. **Χρειάζεται μόνο Docker Desktop** —
-ούτε Node, ούτε `npm install`, ούτε `.env`, ούτε σωστή έκδοση runtime.
-
-```bash
-docker compose --profile app up --build
-```
-
-Μία εντολή, τρία βήματα με τη σειρά:
-
-```
-postgres  ──healthy──▶  migrate  ──exit 0──▶  app
-(βάση)                  (σχήμα + δεδομένα)    (localhost:3000)
-```
-
-Το `migrate` είναι **one-shot container**: τρέχει `drizzle-kit migrate`, μετά το seed, και
-τερματίζει. Το `app` ξεκινά μόνο με `service_completed_successfully` — αν το σχήμα αποτύχει
-να στηθεί, δεν σηκώνεται καθόλου εφαρμογή αντί να εμφανιστεί σπασμένη.
-
-Το πρώτο build παίρνει μερικά λεπτά· τα επόμενα είναι cached. Τερματισμός με `Ctrl+C`
-ή `docker compose down`.
-
-> Το seed τρέχει με `--if-empty`: γεμίζει **μόνο άδεια βάση**. Σε επόμενα
-> `docker compose up` ό,τι έχεις καταχωρίσει από την εφαρμογή παραμένει — το `TRUNCATE`
-> του seed δεν εκτελείται. Επαναφορά στα δεδομένα επίδειξης παραμένει ρητή επιλογή:
-> `npm run db:seed` (χωρίς τη σημαία) ή `docker compose down -v`.
 
 ### Γ. Ανάπτυξη χωρίς εγκατεστημένο Node
 
 Εφεδρική διαδρομή: η εφαρμογή τρέχει σε container με hot reload, ο κώδικας έρχεται από
-bind mount.
+bind mount. Και εδώ τα migrations τρέχουν αυτόματα από το `migrate` service.
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build
+# ή, με Node: npm run dev:docker
 ```
 
 > ⚠️ Σε Windows host είναι **αισθητά πιο αργό** (μετρημένα ~2.7s ανά compile έναντι ~0.5s
@@ -175,14 +184,17 @@ docker compose -f docker-compose.dev.yml up --build
 
 | Εντολή | Περιγραφή |
 |---|---|
-| `npm run dev` | PostgreSQL (container) + development server (native) με hot reload |
+| **`npm run up`** | **Τα πάντα σε containers — βάση, migrations, εφαρμογή** (διαδρομή Α) |
+| **`npm run down`** | **Τερματισμός όλων των containers** |
+| `npm run dev` | PostgreSQL (container) + development server (native) με hot reload (διαδρομή Β) |
+| `npm run dev:docker` | Εφαρμογή σε container με hot reload (διαδρομή Γ) |
 | `npm run db:up` | Μόνο η PostgreSQL, χωρίς την εφαρμογή |
 | `npm run build` | Production build |
 | `npm start` | Εκτέλεση του production build |
-| `npm run docker:prod` | Τα πάντα σε containers (διαδρομή Β) |
-| `npm run docker:dev` | Εφαρμογή σε container με hot reload (διαδρομή Γ) |
-| `npm run docker:down` | Τερματισμός όλων των containers |
 | `npx tsc --noEmit` | Έλεγχος τύπων |
+
+Τα `up` / `down` είναι απλώς συντομογραφίες των εντολών του compose — η διαδρομή Α δεν
+*απαιτεί* npm, δες παραπάνω.
 
 > ⚠️ Το `npm run lint` **δεν λειτουργεί** — το script καλεί `eslint` αλλά το ESLint δεν
 > υπάρχει στα dependencies ούτε υπάρχει config. Χρειάζεται είτε εγκατάσταση
@@ -203,7 +215,7 @@ Windows (γι' αυτό το dev image πέφτει πίσω σε webpack με p
 Γι' αυτό στο [`docker-compose.yml`](docker-compose.yml) η εφαρμογή είναι πίσω από το
 profile `app`: τα backing services σηκώνονται με σκέτο `docker compose up -d`, ενώ το
 container της εφαρμογής μόνο όταν ζητηθεί ρητά. Το [`Dockerfile`](Dockerfile) παραμένει
-απαραίτητο για production, CI, και τη διαδρομή Β.
+απαραίτητο για production, CI, και τη διαδρομή Α.
 
 ---
 
