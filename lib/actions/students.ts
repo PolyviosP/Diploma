@@ -8,9 +8,9 @@
 import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 
-import { CURRENT_STUDENT } from '../data'
 import { db } from '../db'
 import { diplomas, students, users } from '../db/schema'
+import { currentStudent } from '../session'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -19,7 +19,7 @@ async function currentStudentId(): Promise<string | undefined> {
     .select({ userId: students.userId })
     .from(students)
     .innerJoin(users, eq(students.userId, users.id))
-    .where(eq(users.fullName, CURRENT_STUDENT))
+    .where(eq(users.fullName, await currentStudent()))
     .limit(1)
 
   return row?.userId

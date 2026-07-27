@@ -13,17 +13,19 @@ import {
   GradeBreakdown,
   GradeProgress,
 } from '@/components/grading/grade-summary'
-import { CURRENT_STUDENT, formatDate } from '@/lib/data'
+import { formatDate } from '@/lib/data'
 import {
   getAllTopics,
   getAnnotationsFor,
   getChangeRequests,
   getGrades,
 } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function StudentDiplomaPage() {
+  const me = await currentStudent()
   const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
-  const diploma = allTopics.find((t) => t.student === CURRENT_STUDENT)
+  const diploma = allTopics.find((t) => t.student === me)
 
   if (!diploma) {
     return (
@@ -49,7 +51,7 @@ export default async function StudentDiplomaPage() {
     getAnnotationsFor(diploma.id),
   ])
   const changeRequest = allRequests.find(
-    (r) => r.topicId === diploma.id && r.student === CURRENT_STUDENT,
+    (r) => r.topicId === diploma.id && r.student === me,
   )
   // UC-13 — οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
   const gradesVisible = diploma.status === 'completed'

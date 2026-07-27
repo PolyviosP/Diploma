@@ -17,12 +17,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { DeclareInterest, type DeclareBlock } from '@/components/student/declare-interest'
-import {
-  CURRENT_STUDENT,
-  MAX_ACTIVE_APPLICATIONS,
-  checkEligibility,
-  formatDate,
-} from '@/lib/data'
+import { MAX_ACTIVE_APPLICATIONS, checkEligibility, formatDate } from '@/lib/data'
 import {
   getApplicationsOf,
   getStudentByName,
@@ -30,20 +25,22 @@ import {
   studentHasActiveDiploma,
   getEligibilityRules,
 } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function TopicDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const me = await currentStudent()
   const { id } = await params
   const topic = await getTopicById(id)
   if (!topic) notFound()
 
   const [record, myApplications, hasActiveDiploma, rules] = await Promise.all([
-    getStudentByName(CURRENT_STUDENT),
-    getApplicationsOf(CURRENT_STUDENT),
-    studentHasActiveDiploma(CURRENT_STUDENT),
+    getStudentByName(me),
+    getApplicationsOf(me),
+    studentHasActiveDiploma(me),
     getEligibilityRules(),
   ])
 

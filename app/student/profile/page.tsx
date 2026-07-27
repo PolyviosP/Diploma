@@ -1,11 +1,12 @@
 import { PageHeader } from '@/components/ui/page'
 import { ProfileForm } from '@/components/student/profile-form'
-import { CURRENT_STUDENT } from '@/lib/data'
 import { getEligibilityRules, getStudentByName } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function StudentProfilePage() {
+  const me = await currentStudent()
   const [record, rules] = await Promise.all([
-    getStudentByName(CURRENT_STUDENT),
+    getStudentByName(me),
     getEligibilityRules(),
   ])
 

@@ -11,7 +11,7 @@
 import { revalidatePath } from 'next/cache'
 import { and, count, eq, ne } from 'drizzle-orm'
 
-import { CURRENT_STUDENT, MAX_ACTIVE_APPLICATIONS } from '../data'
+import { MAX_ACTIVE_APPLICATIONS } from '../data'
 import { db } from '../db'
 import {
   applications,
@@ -21,6 +21,7 @@ import {
   topics,
   users,
 } from '../db/schema'
+import { currentStudent } from '../session'
 
 export type DeclareResult = { ok: true } | { ok: false; error: string }
 
@@ -40,7 +41,7 @@ export async function declareInterest(
     })
     .from(students)
     .innerJoin(users, eq(students.userId, users.id))
-    .where(eq(users.fullName, CURRENT_STUDENT))
+    .where(eq(users.fullName, await currentStudent()))
     .limit(1)
 
   if (!student) {
@@ -153,7 +154,7 @@ export async function withdrawApplication(
     .limit(1)
 
   if (!row) return { ok: false, error: 'Η δήλωση δεν βρέθηκε.' }
-  if (row.studentName !== CURRENT_STUDENT) {
+  if (row.studentName !== (await currentStudent())) {
     return { ok: false, error: 'Η δήλωση ανήκει σε άλλον φοιτητή.' }
   }
   if (row.status !== 'pending') {

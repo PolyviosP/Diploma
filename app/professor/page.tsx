@@ -14,28 +14,25 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge, ChangeRequestBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GradeProgress } from '@/components/grading/grade-summary'
-import {
-  CURRENT_PROFESSOR,
-  finalGradeOf,
-  formatDate,
-  statusMeta,
-} from '@/lib/data'
+import { finalGradeOf, formatDate, statusMeta } from '@/lib/data'
 import { getAllTopics, getChangeRequests, getGrades } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function ProfessorDashboard() {
+  const me = await currentProfessor()
   const [allTopics, allRequests, allGrades] = await Promise.all([
     getAllTopics(),
     getChangeRequests(),
     getGrades(),
   ])
 
-  const mine = allTopics.filter((t) => t.professor === CURRENT_PROFESSOR)
+  const mine = allTopics.filter((t) => t.professor === me)
   const open = mine.filter((t) => t.status === 'available' || t.status === 'draft')
   const active = mine.filter((t) => t.status === 'assigned' || t.status === 'review')
   const completed = mine.filter((t) => t.status === 'completed')
   const totalApplicants = open.reduce((n, t) => n + (t.applicants?.length ?? 0), 0)
   const myRequests = allRequests.filter(
-    (r) => r.requestedBy === CURRENT_PROFESSOR && r.status !== 'approved' && r.status !== 'rejected',
+    (r) => r.requestedBy === me && r.status !== 'approved' && r.status !== 'rejected',
   )
 
   return (

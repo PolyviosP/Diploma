@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { GradeProgress } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, finalGradeOf, formatDate } from '@/lib/data'
+import { finalGradeOf, formatDate } from '@/lib/data'
 import { getAllTopics, getGrades } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function ProfessorDiplomasPage() {
+  const me = await currentProfessor()
   const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
   const supervised = allTopics.filter(
-    (t) => t.professor === CURRENT_PROFESSOR && Boolean(t.student),
+    (t) => t.professor === me && Boolean(t.student),
   )
 
   return (

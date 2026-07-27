@@ -13,24 +13,26 @@ import {
   GradeProgress,
   FinalGradeBlock,
 } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, formatDate } from '@/lib/data'
+import { formatDate } from '@/lib/data'
 import { getAnnotationsFor, getGradesFor, getTopicById } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function CommitteeEvaluationPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const me = await currentProfessor()
   const { id } = await params
   const topic = await getTopicById(id)
-  if (!topic || !topic.committee?.includes(CURRENT_PROFESSOR)) notFound()
+  if (!topic || !topic.committee?.includes(me)) notFound()
 
   const [topicGrades, topicAnnotations] = await Promise.all([
     getGradesFor(topic.id),
     getAnnotationsFor(topic.id),
   ])
 
-  const myGrade = topicGrades.find((g) => g.professor === CURRENT_PROFESSOR)
+  const myGrade = topicGrades.find((g) => g.professor === me)
   // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
   const canGrade =
     Boolean(topic.document) && Boolean(topic.presentedAt) && topic.status !== 'completed'
@@ -90,7 +92,7 @@ export default async function CommitteeEvaluationPage({
           <AnnotationsPanel
             topicId={topic.id}
             annotations={topicAnnotations}
-            author={CURRENT_PROFESSOR}
+            author={me}
             readOnly={topic.status === 'completed'}
           />
         </div>
@@ -160,7 +162,7 @@ export default async function CommitteeEvaluationPage({
                     <Avatar name={member} className="size-8" />
                     <span className="truncate text-sm">
                       {member}
-                      {member === CURRENT_PROFESSOR ? (
+                      {member === me ? (
                         <span className="ml-1 text-xs text-primary">(εσείς)</span>
                       ) : null}
                     </span>

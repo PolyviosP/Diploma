@@ -4,9 +4,10 @@ import { PageHeader } from '@/components/ui/page'
 import { Button } from '@/components/ui/button'
 import { TopicsManager } from '@/components/professor/topics-manager'
 import { getAllTopics } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function ProfessorTopicsPage() {
-  const topics = await getAllTopics()
+  const [topics, me] = await Promise.all([getAllTopics(), currentProfessor()])
 
   return (
     <div className="flex flex-col gap-8">
@@ -19,7 +20,7 @@ export default async function ProfessorTopicsPage() {
           Νέο θέμα
         </Button>
       </PageHeader>
-      <TopicsManager topics={topics} />
+      <TopicsManager topics={topics} professor={me} />
     </div>
   )
 }

@@ -147,9 +147,8 @@ export const ROLE_META: Record<
   },
 }
 
-/** Τρέχουσες περσόνες του πρωτοτύπου (θα προέρχονται από το SSO). */
-export const CURRENT_STUDENT = ROLE_META.student.person
-export const CURRENT_PROFESSOR = ROLE_META.professor.person
+// Ο τρέχων χρήστης δεν είναι πια σταθερά: επιλέγεται στη σύνδεση και διαβάζεται
+// από το lib/session.ts. Οι περσόνες του ROLE_META μένουν ως προεπιλογές.
 
 /* -------------------------------------------------------------------------- */
 /*  Διδάσκοντες                                                                 */

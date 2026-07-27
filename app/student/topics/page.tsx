@@ -1,19 +1,21 @@
 import { PageHeader } from '@/components/ui/page'
 import { Notice } from '@/components/ui/notice'
 import { TopicSearch } from '@/components/student/topic-search'
-import { CURRENT_STUDENT, MAX_ACTIVE_APPLICATIONS, checkEligibility } from '@/lib/data'
+import { MAX_ACTIVE_APPLICATIONS, checkEligibility } from '@/lib/data'
 import {
   getApplicationsOf,
   getAvailableTopics,
   getStudentByName,
   getEligibilityRules,
 } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function StudentTopicsPage() {
+  const me = await currentStudent()
   const [available, record, myApplications, rules] = await Promise.all([
     getAvailableTopics(),
-    getStudentByName(CURRENT_STUDENT),
-    getApplicationsOf(CURRENT_STUDENT),
+    getStudentByName(me),
+    getApplicationsOf(me),
     getEligibilityRules(),
   ])
 

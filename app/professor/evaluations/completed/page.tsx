@@ -4,13 +4,15 @@ import { PageHeader, EmptyState } from '@/components/ui/page'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { FinalGradeBlock, GradeBreakdown } from '@/components/grading/grade-summary'
-import { CURRENT_PROFESSOR, formatDate } from '@/lib/data'
+import { formatDate } from '@/lib/data'
 import { getAllTopics, getGrades } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function CompletedEvaluationsPage() {
+  const me = await currentProfessor()
   const [allTopics, allGrades] = await Promise.all([getAllTopics(), getGrades()])
   const diplomas = allTopics.filter(
-    (t) => t.committee?.includes(CURRENT_PROFESSOR) && t.status === 'completed',
+    (t) => t.committee?.includes(me) && t.status === 'completed',
   )
 
   return (

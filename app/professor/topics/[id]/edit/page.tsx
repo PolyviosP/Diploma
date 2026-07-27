@@ -5,17 +5,18 @@ import { PageHeader } from '@/components/ui/page'
 import { Notice } from '@/components/ui/notice'
 import { Button } from '@/components/ui/button'
 import { TopicForm } from '@/components/professor/topic-form'
-import { CURRENT_PROFESSOR } from '@/lib/data'
 import { getTopicById } from '@/lib/db/queries'
+import { currentProfessor } from '@/lib/session'
 
 export default async function EditTopicPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const me = await currentProfessor()
   const { id } = await params
   const topic = await getTopicById(id)
-  if (!topic || topic.professor !== CURRENT_PROFESSOR) notFound()
+  if (!topic || topic.professor !== me) notFound()
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">

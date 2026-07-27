@@ -16,14 +16,7 @@ import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { TopicCard } from '@/components/topic-card'
 import { ChangeRequestCard } from '@/components/student/change-request-card'
-import {
-  CURRENT_STUDENT,
-  MAX_ACTIVE_APPLICATIONS,
-  ROLE_META,
-  STATUS_META,
-  checkEligibility,
-  formatDate,
-} from '@/lib/data'
+import { MAX_ACTIVE_APPLICATIONS, STATUS_META, checkEligibility, formatDate } from '@/lib/data'
 import {
   getAllTopics,
   getApplications,
@@ -31,12 +24,13 @@ import {
   getStudentByName,
   getEligibilityRules,
 } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function StudentDashboard() {
-  const meta = ROLE_META.student
+  const me = await currentStudent()
 
   const [record, allTopics, allApplications, allRequests, rules] = await Promise.all([
-    getStudentByName(CURRENT_STUDENT),
+    getStudentByName(me),
     getAllTopics(),
     getApplications(),
     getChangeRequests(),
@@ -45,18 +39,18 @@ export default async function StudentDashboard() {
 
   const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
 
-  const myDiploma = allTopics.find((t) => t.student === CURRENT_STUDENT)
-  const myApplications = allApplications.filter((a) => a.student === CURRENT_STUDENT)
+  const myDiploma = allTopics.find((t) => t.student === me)
+  const myApplications = allApplications.filter((a) => a.student === me)
   const activeApplications = myApplications.filter((a) => a.status === 'pending')
   const available = allTopics.filter((t) => t.status === 'available')
   const pendingChangeRequest = allRequests.find(
-    (r) => r.student === CURRENT_STUDENT && r.status === 'pending_student',
+    (r) => r.student === me && r.status === 'pending_student',
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Καλωσόρισες, ${meta.person.split(' ')[0]}`}
+        title={`Καλωσόρισες, ${me.split(' ')[0]}`}
         description="Παρακολούθησε την πορεία της διπλωματικής σου και ανακάλυψε νέα θέματα."
       >
         <Button render={<Link href="/student/topics" />}>

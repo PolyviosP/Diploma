@@ -7,7 +7,7 @@
 import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
 
-import { CRITERIA, CURRENT_PROFESSOR, round1, type GradeCriteria } from '../data'
+import { CRITERIA, round1, type GradeCriteria } from '../data'
 import { db } from '../db'
 import {
   annotations,
@@ -18,6 +18,7 @@ import {
   topics,
   users,
 } from '../db/schema'
+import { currentProfessor } from '../session'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -26,7 +27,7 @@ async function currentProfessorId(): Promise<string | undefined> {
     .select({ userId: professors.userId })
     .from(professors)
     .innerJoin(users, eq(professors.userId, users.id))
-    .where(eq(users.fullName, CURRENT_PROFESSOR))
+    .where(eq(users.fullName, await currentProfessor()))
     .limit(1)
 
   return row?.userId

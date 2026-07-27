@@ -10,9 +10,9 @@
 import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 
-import { CURRENT_PROFESSOR, CURRENT_STUDENT } from '../data'
 import { db } from '../db'
 import { changeRequests, diplomas, professors, topics, users } from '../db/schema'
+import { currentProfessor, currentStudent } from '../session'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -32,7 +32,7 @@ async function currentProfessorId(): Promise<string | undefined> {
     .select({ userId: professors.userId })
     .from(professors)
     .innerJoin(users, eq(professors.userId, users.id))
-    .where(eq(users.fullName, CURRENT_PROFESSOR))
+    .where(eq(users.fullName, await currentProfessor()))
     .limit(1)
 
   return row?.userId
@@ -95,7 +95,7 @@ export async function respondToChangeRequest(
     .limit(1)
 
   if (!request) return { ok: false, error: 'Το αίτημα δεν βρέθηκε.' }
-  if (request.studentName !== CURRENT_STUDENT) {
+  if (request.studentName !== (await currentStudent())) {
     return { ok: false, error: 'Το αίτημα αφορά άλλον φοιτητή.' }
   }
   if (request.status !== 'pending_student') {

@@ -1,12 +1,13 @@
 import { PageHeader } from '@/components/ui/page'
 import { ApplicationsList } from '@/components/student/applications-list'
-import { CURRENT_STUDENT } from '@/lib/data'
 import { getApplicationsOf, studentHasActiveDiploma } from '@/lib/db/queries'
+import { currentStudent } from '@/lib/session'
 
 export default async function StudentApplicationsPage() {
+  const me = await currentStudent()
   const [applications, hasActiveDiploma] = await Promise.all([
-    getApplicationsOf(CURRENT_STUDENT),
-    studentHasActiveDiploma(CURRENT_STUDENT),
+    getApplicationsOf(me),
+    studentHasActiveDiploma(me),
   ])
 
   return (

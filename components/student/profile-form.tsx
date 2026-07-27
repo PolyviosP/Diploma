@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import {
-  ROLE_META,
   checkEligibility,
   formatDate,
   type EligibilityRules,
@@ -26,7 +25,6 @@ export function ProfileForm({
   record?: StudentRecord
   rules: EligibilityRules
 }) {
-  const meta = ROLE_META.student
   const eligibility = record
     ? checkEligibility(record, rules)
     : { eligible: false, reasons: [] }
@@ -95,9 +93,11 @@ export function ProfileForm({
       <div className="space-y-6 lg:col-span-1">
         <Card>
           <CardContent className="flex flex-col items-center p-6 text-center">
-            <Avatar name={meta.person} className="size-20 text-2xl" />
-            <h3 className="mt-4 font-serif text-lg font-semibold">{meta.person}</h3>
-            <p className="text-sm text-muted-foreground">{meta.detail}</p>
+            <Avatar name={record?.name ?? ''} className="size-20 text-2xl" />
+            <h3 className="mt-4 font-serif text-lg font-semibold">{record?.name}</h3>
+            <p className="text-sm text-muted-foreground">
+              {record ? `ΑΜ ${record.am} · ${record.semester}ο εξάμηνο` : ''}
+            </p>
             {record ? (
               <div className="mt-4 grid w-full grid-cols-3 gap-2 border-t border-border pt-4">
                 <Stat label="Έτος" value={`${record.year}ο`} />
