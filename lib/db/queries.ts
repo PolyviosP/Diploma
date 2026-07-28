@@ -441,7 +441,7 @@ export async function getEligibilityRules() {
   }
 }
 
-/** BR-1: έχει ο φοιτητής ήδη ενεργή διπλωματική; */
+/** Έχει ο φοιτητής ήδη ενεργή διπλωματική; */
 export async function studentHasActiveDiploma(studentName: string): Promise<boolean> {
   const [row] = await db
     .select({ id: diplomas.id })

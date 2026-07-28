@@ -33,13 +33,13 @@ export default async function CommitteeEvaluationPage({
   ])
 
   const myGrade = topicGrades.find((g) => g.professor === me)
-  // BR-6 — βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
+  // Βαθμολόγηση μόνο μετά την υποβολή τελικού κειμένου ΚΑΙ την παρουσίαση.
   const canGrade =
     Boolean(topic.document) && Boolean(topic.presentedAt) && topic.status !== 'completed'
   const blockedReason = !topic.document
-    ? 'Δεν έχει υποβληθεί ακόμη το τελικό κείμενο της διπλωματικής (BR-6).'
+    ? 'Δεν έχει υποβληθεί ακόμη το τελικό κείμενο της διπλωματικής.'
     : !topic.presentedAt
-      ? 'Εκκρεμεί η παρουσίαση της διπλωματικής. Ο επιβλέπων πρέπει πρώτα να τη δηλώσει (BR-6).'
+      ? 'Εκκρεμεί η παρουσίαση της διπλωματικής. Ο επιβλέπων πρέπει πρώτα να τη δηλώσει.'
       : 'Η διπλωματική έχει ολοκληρωθεί και η βαθμολογία έχει οριστικοποιηθεί.'
 
   return (

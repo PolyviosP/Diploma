@@ -218,7 +218,7 @@ export type Topic = {
   grade?: number | null
   deadline?: string
   document?: { name: string; size: string; submittedAt: string }
-  /** Ημερομηνία παρουσίασης — απαιτείται από BR-6 πριν τη βαθμολόγηση. */
+  /** Ημερομηνία παρουσίασης — απαιτείται πριν τη βαθμολόγηση. */
   presentedAt?: string
 }
 
@@ -504,7 +504,7 @@ export const APPLICATIONS: Application[] = [
   },
 ]
 
-/** BR-2 — έως 3 ενεργές (εκκρεμείς) δηλώσεις ανά φοιτητή. */
+/** Έως 3 ενεργές (εκκρεμείς) δηλώσεις ανά φοιτητή. */
 export const MAX_ACTIVE_APPLICATIONS = 3
 
 export function applicationsOf(student: string) {
@@ -597,7 +597,7 @@ export const GRADES: Grade[] = [
     comments: 'Άρτια παρουσίαση και τεκμηρίωση των αποτελεσμάτων.',
     createdAt: '2024-09-27',
   },
-  // Το THE-2408 δεν έχει ακόμη βαθμούς: εκκρεμεί η παρουσίαση (BR-6).
+  // Το THE-2408 δεν έχει ακόμη βαθμούς: εκκρεμεί η παρουσίαση.
   {
     id: 'GRD-512',
     topicId: 'THE-2405',
@@ -610,7 +610,7 @@ export const GRADES: Grade[] = [
   },
 ]
 
-/** BR-8 — βαθμός ≥ 5 σημαίνει επιτυχία. */
+/** Βαθμός ≥ 5 σημαίνει επιτυχία. */
 export const PASS_THRESHOLD = 5
 
 export function round1(n: number) {
@@ -621,7 +621,7 @@ export function gradesFor(topicId: string) {
   return GRADES.filter((g) => g.topicId === topicId)
 }
 
-/** BR-7 — τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
+/** Τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
 export function finalGradeFor(topicId: string): number | null {
   const list = gradesFor(topicId)
   if (list.length < 3) return null
@@ -636,7 +636,7 @@ export function gradesOf(all: Grade[], topicId: string) {
   return all.filter((g) => g.topicId === topicId)
 }
 
-/** BR-7 — τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
+/** Τελικός βαθμός = μέσος όρος 3 βαθμών, οριστικοποιείται στους 3/3. */
 export function finalGradeOf(all: Grade[], topicId: string): number | null {
   const list = gradesOf(all, topicId)
   if (list.length < 3) return null

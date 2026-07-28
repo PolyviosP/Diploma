@@ -50,7 +50,8 @@ export default async function TopicDetailPage({
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),
   )
 
-  // Έλεγχοι πριν τη δήλωση ενδιαφέροντος (προϋποθέσεις + BR-1 + BR-2).
+  // Έλεγχοι πριν τη δήλωση ενδιαφέροντος: προϋποθέσεις, ενεργή διπλωματική, όριο
+  // ενεργών δηλώσεων.
   const block: DeclareBlock = !eligibility.eligible
     ? {
         blocked: true,
@@ -61,13 +62,13 @@ export default async function TopicDetailPage({
       ? {
           blocked: true,
           title: 'Έχεις ήδη διπλωματική',
-          detail: 'Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική εργασία (BR-1).',
+          detail: 'Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική εργασία.',
         }
       : activeApplications >= MAX_ACTIVE_APPLICATIONS
         ? {
             blocked: true,
             title: 'Όριο δηλώσεων',
-            detail: `Έχεις ήδη ${MAX_ACTIVE_APPLICATIONS} ενεργές δηλώσεις ενδιαφέροντος (BR-2).`,
+            detail: `Έχεις ήδη ${MAX_ACTIVE_APPLICATIONS} ενεργές δηλώσεις ενδιαφέροντος.`,
           }
         : { blocked: false }
 

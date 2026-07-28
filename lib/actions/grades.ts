@@ -1,7 +1,7 @@
 'use server'
 
 /**
- * UC-11 — βαθμολόγηση από μέλος τριμελούς, και παρατηρήσεις επί του κειμένου.
+ * Βαθμολόγηση από μέλος τριμελούς, και παρατηρήσεις επί του κειμένου.
  */
 
 import { revalidatePath } from 'next/cache'
@@ -53,9 +53,9 @@ function weighted(criteria: GradeCriteria) {
 /**
  * Καταχώρηση ή ενημέρωση βαθμού.
  *
- * BR-6: μόνο μετά από υποβολή κειμένου ΚΑΙ παρουσίαση.
- * BR-7: όταν συμπληρωθούν και οι 3 βαθμοί, οριστικοποιείται ο μέσος όρος και η
- *       διπλωματική περνά σε ΟΛΟΚΛΗΡΩΜΕΝΗ. Γίνεται στην ίδια συναλλαγή.
+ * Επιτρέπεται μόνο μετά από υποβολή κειμένου ΚΑΙ παρουσίαση. Όταν συμπληρωθούν
+ * και οι 3 βαθμοί, οριστικοποιείται ο μέσος όρος και η διπλωματική περνά σε
+ * ΟΛΟΚΛΗΡΩΜΕΝΗ — στην ίδια συναλλαγή.
  */
 export async function submitGrade(
   topicId: string,
@@ -91,10 +91,10 @@ export async function submitGrade(
     return { ok: false, error: 'Η βαθμολογία έχει ήδη οριστικοποιηθεί.' }
   }
   if (!diploma.submittedAt) {
-    return { ok: false, error: 'Δεν έχει υποβληθεί το τελικό κείμενο (BR-6).' }
+    return { ok: false, error: 'Δεν έχει υποβληθεί το τελικό κείμενο.' }
   }
   if (!diploma.presentedAt) {
-    return { ok: false, error: 'Εκκρεμεί η παρουσίαση της διπλωματικής (BR-6).' }
+    return { ok: false, error: 'Εκκρεμεί η παρουσίαση της διπλωματικής.' }
   }
 
   // Μόνο μέλη της τριμελούς βαθμολογούν.
@@ -147,7 +147,7 @@ export async function submitGrade(
         .from(grades)
         .where(eq(grades.diplomaId, diploma.id))
 
-      // BR-7 — οριστικοποίηση στους 3/3.
+      // Οριστικοποίηση στους 3/3.
       if (all.length === 3) {
         const final = round1(all.reduce((sum, g) => sum + Number(g.score), 0) / 3)
 

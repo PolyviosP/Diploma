@@ -12,9 +12,9 @@ import { declareInterest } from '@/lib/actions/applications'
 export type DeclareBlock = { blocked: true; title: string; detail: string } | { blocked: false }
 
 /**
- * UC-04 — Δήλωση ενδιαφέροντος.
- * Ελέγχονται οι προϋποθέσεις του οδηγού σπουδών καθώς και οι BR-1/BR-2
- * πριν επιτραπεί η υποβολή.
+ * Δήλωση ενδιαφέροντος.
+ * Ελέγχονται οι προϋποθέσεις του οδηγού σπουδών, το όριο ενεργών δηλώσεων και η
+ * ύπαρξη ενεργής διπλωματικής πριν επιτραπεί η υποβολή.
  */
 export function DeclareInterest({
   topicId,

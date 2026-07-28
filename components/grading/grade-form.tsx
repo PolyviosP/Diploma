@@ -15,9 +15,8 @@ import { submitGrade } from '@/lib/actions/grades'
 const EMPTY: GradeCriteria = { content: 8, methodology: 8, writing: 8, presentation: 8 }
 
 /**
- * UC-10 — Βαθμολόγηση από μέλος τριμελούς.
- * BR-6: επιτρέπεται μόνο εφόσον έχει υποβληθεί το τελικό κείμενο και έχει
- * πραγματοποιηθεί η παρουσίαση.
+ * Βαθμολόγηση από μέλος τριμελούς. Επιτρέπεται μόνο εφόσον έχει υποβληθεί το
+ * τελικό κείμενο και έχει πραγματοποιηθεί η παρουσίαση.
  */
 export function GradeForm({
   topicId,
@@ -80,7 +79,7 @@ export function GradeForm({
         <CardContent>
           <Notice variant="warning" title="Η βαθμολόγηση δεν είναι διαθέσιμη">
             {blockedReason ??
-              'Απαιτείται υποβολή του τελικού κειμένου και ολοκλήρωση της παρουσίασης (BR-6).'}
+              'Απαιτείται υποβολή του τελικού κειμένου και ολοκλήρωση της παρουσίασης.'}
           </Notice>
         </CardContent>
       </Card>

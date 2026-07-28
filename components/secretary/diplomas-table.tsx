@@ -31,7 +31,7 @@ import {
 
 const STATUS_OPTIONS: DiplomaStatus[] = ['assigned', 'review', 'completed']
 
-/** FR-A1 / FR-A2 — προβολή όλων των διπλωματικών με φίλτρα και εξαγωγή CSV. */
+/** Προβολή όλων των διπλωματικών με φίλτρα και εξαγωγή CSV. */
 export function DiplomasTable({
   topics,
   professors,

@@ -124,7 +124,7 @@ export function TopicManagement({
     const applicant = topic.applicants?.find((a) => a.name === selectedApplicant)
     if (!applicant) return
 
-    // BR-3/BR-4 — το θέμα ανατίθεται σε έναν φοιτητή, οι υπόλοιπες δηλώσεις απορρίπτονται.
+    // Το θέμα ανατίθεται σε έναν φοιτητή, οι υπόλοιπες δηλώσεις απορρίπτονται.
     const rejected = (topic.applicants?.length ?? 1) - 1
     run(
       () => assignStudent(topic.id, applicant.am),
@@ -150,11 +150,11 @@ export function TopicManagement({
   }
 
   function saveCommittee() {
-    // BR-5 — η τριμελής αποτελείται από 3 διδάσκοντες με τον επιβλέποντα υποχρεωτικό μέλος.
+    // Η τριμελής αποτελείται από 3 διδάσκοντες με τον επιβλέποντα υποχρεωτικό μέλος.
     if (draftCommittee.length !== COMMITTEE_SIZE - 1) {
       toast({
         title: 'Απαιτούνται 2 επιπλέον μέλη',
-        description: 'Η τριμελής επιτροπή αποτελείται από 3 διδάσκοντες συνολικά (BR-5).',
+        description: 'Η τριμελής επιτροπή αποτελείται από 3 διδάσκοντες συνολικά.',
         variant: 'warning',
       })
       return
@@ -169,7 +169,7 @@ export function TopicManagement({
     )
   }
 
-  // BR-6 — η βαθμολόγηση ξεκλειδώνει μόνο αφού δηλωθεί η παρουσίαση.
+  // Η βαθμολόγηση ξεκλειδώνει μόνο αφού δηλωθεί η παρουσίαση.
   function confirmPresentation() {
     run(
       () => markPresented(topic.id),
@@ -559,7 +559,7 @@ export function TopicManagement({
         <div className="flex flex-col gap-3">
           <Notice variant="warning" title="Αυτόματη απόρριψη λοιπών δηλώσεων">
             Με την επιλογή φοιτητή, οι υπόλοιπες δηλώσεις ενδιαφέροντος για το θέμα απορρίπτονται
-            αυτόματα (BR-4).
+            αυτόματα.
           </Notice>
           {(topic.applicants ?? []).map((applicant) => {
             const record = students.find((s) => s.name === applicant.name)
@@ -595,7 +595,7 @@ export function TopicManagement({
         open={committeeOpen}
         onClose={() => setCommitteeOpen(false)}
         title="Ορισμός τριμελούς επιτροπής"
-        description="Επιλέξτε 2 επιπλέον μέλη. Εσείς συμμετέχετε υποχρεωτικά ως επιβλέπων (BR-5)."
+        description="Επιλέξτε 2 επιπλέον μέλη. Εσείς συμμετέχετε υποχρεωτικά ως επιβλέπων."
         footer={
           <>
             <Button variant="ghost" onClick={() => setCommitteeOpen(false)}>
@@ -658,7 +658,7 @@ export function TopicManagement({
         onClose={() => setPresentationOpen(false)}
         onConfirm={confirmPresentation}
         title="Δήλωση παρουσίασης"
-        description="Επιβεβαιώνετε ότι η παρουσίαση της διπλωματικής πραγματοποιήθηκε; Με τη δήλωση ξεκλειδώνει η βαθμολόγηση για όλα τα μέλη της τριμελούς (BR-6)."
+        description="Επιβεβαιώνετε ότι η παρουσίαση της διπλωματικής πραγματοποιήθηκε; Με τη δήλωση ξεκλειδώνει η βαθμολόγηση για όλα τα μέλη της τριμελούς."
         confirmLabel="Καταχώρηση"
       />
 

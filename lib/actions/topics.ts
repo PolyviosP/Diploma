@@ -1,7 +1,7 @@
 'use server'
 
 /**
- * UC-01 — Δημιουργία θέματος διπλωματικής.
+ * Δημιουργία θέματος διπλωματικής.
  *
  * Όπως και στο applications.ts, οι κανόνες ελέγχονται server-side: η φόρμα του
  * client μπορεί να παρακαμφθεί.
@@ -173,7 +173,7 @@ async function ownedDraft(topicId: string): Promise<ActionResult> {
     return { ok: false, error: 'Το θέμα ανήκει σε άλλον διδάσκοντα.' }
   }
   // Μόλις δημοσιευθεί, το θέμα το βλέπουν φοιτητές και μπορεί να έχει δηλώσεις:
-  // η αλλαγή περιεχομένου περνά τότε από αίτημα τροποποίησης (UC-14).
+  // η αλλαγή περιεχομένου περνά τότε από αίτημα τροποποίησης.
   if (topic.status !== 'draft') {
     return {
       ok: false,
@@ -185,7 +185,7 @@ async function ownedDraft(topicId: string): Promise<ActionResult> {
   return { ok: true }
 }
 
-/** UC-02 — πλήρης επεξεργασία προχείρου θέματος. */
+/** Πλήρης επεξεργασία προχείρου θέματος. */
 export async function updateTopic(
   topicId: string,
   input: TopicInput,
@@ -206,7 +206,7 @@ export async function updateTopic(
 }
 
 /**
- * UC-02 — οριστική διαγραφή προχείρου θέματος.
+ * Οριστική διαγραφή προχείρου θέματος.
  *
  * Οι δηλώσεις ενδιαφέροντος φεύγουν μαζί (ON DELETE CASCADE). Το `diplomas`
  * *δεν* έχει cascade, οπότε η βάση μπλοκάρει τη διαγραφή θέματος με ανατεθειμένη
@@ -301,11 +301,11 @@ export async function unpublishTopic(topicId: string): Promise<ActionResult> {
 /* -------------------------------------------------------------------------- */
 
 /**
- * UC-07 — ανάθεση θέματος σε φοιτητή.
+ * Ανάθεση θέματος σε φοιτητή.
  *
  * Όλα σε μία συναλλαγή: εγκρίνεται η δήλωση του επιλεγμένου, απορρίπτονται οι
- * υπόλοιπες (BR-4), δημιουργείται η διπλωματική (BR-3) και το θέμα περνά σε
- * ΑΝΑΤΕΘΕΙΜΕΝΟ. Αν οτιδήποτε αποτύχει, δεν γράφεται τίποτα.
+ * υπόλοιπες, δημιουργείται η διπλωματική και το θέμα περνά σε ΑΝΑΤΕΘΕΙΜΕΝΟ. Αν
+ * οτιδήποτε αποτύχει, δεν γράφεται τίποτα.
  */
 export async function assignStudent(
   topicId: string,
@@ -336,7 +336,7 @@ export async function assignStudent(
 
   if (!student) return { ok: false, error: `Δεν βρέθηκε φοιτητής με ΑΜ ${studentAm}.` }
 
-  // BR-1: δεν μπορεί να πάρει δεύτερη ενεργή διπλωματική.
+  // Δεν μπορεί να πάρει δεύτερη ενεργή διπλωματική.
   const [active] = await db
     .select({ id: diplomas.id })
     .from(diplomas)
@@ -359,7 +359,7 @@ export async function assignStudent(
           ),
         )
 
-      // BR-4 — η επιλογή απορρίπτει αυτόματα τις υπόλοιπες δηλώσεις του θέματος.
+      // Η επιλογή απορρίπτει αυτόματα τις υπόλοιπες δηλώσεις του θέματος.
       await tx
         .update(applications)
         .set({
@@ -399,7 +399,7 @@ export async function assignStudent(
 /*  Τριμελής επιτροπή                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** BR-5 — ακριβώς 3 μέλη, ο επιβλέπων υποχρεωτικά ένα από αυτά. */
+/** Ακριβώς 3 μέλη, ο επιβλέπων υποχρεωτικά ένα από αυτά. */
 export async function setCommittee(
   topicId: string,
   memberNames: string[],
@@ -423,7 +423,7 @@ export async function setCommittee(
   const supervisor = await currentProfessor()
   const others = memberNames.filter((name) => name !== supervisor)
   if (others.length !== 2) {
-    return { ok: false, error: 'Η τριμελής επιτροπή αποτελείται από 3 διδάσκοντες (BR-5).' }
+    return { ok: false, error: 'Η τριμελής επιτροπή αποτελείται από 3 διδάσκοντες.' }
   }
 
   const rows = await db
@@ -460,7 +460,7 @@ export async function setCommittee(
 /*  Παρουσίαση & εξέταση                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** BR-6 — η δήλωση παρουσίασης ξεκλειδώνει τη βαθμολόγηση. */
+/** Η δήλωση παρουσίασης ξεκλειδώνει τη βαθμολόγηση. */
 export async function markPresented(topicId: string): Promise<ActionResult> {
   const professorId = await currentProfessorId()
   if (!professorId) return { ok: false, error: 'Ο διδάσκων δεν βρέθηκε.' }
@@ -480,7 +480,7 @@ export async function markPresented(topicId: string): Promise<ActionResult> {
     return { ok: false, error: 'Δεν είστε ο επιβλέπων αυτής της διπλωματικής.' }
   }
   if (!diploma.submittedAt) {
-    return { ok: false, error: 'Δεν έχει υποβληθεί ακόμη το τελικό κείμενο (BR-6).' }
+    return { ok: false, error: 'Δεν έχει υποβληθεί ακόμη το τελικό κείμενο.' }
   }
 
   await db.update(diplomas).set({ presentedAt: new Date() }).where(eq(diplomas.id, diploma.id))
@@ -511,7 +511,7 @@ export async function sendToReview(topicId: string): Promise<ActionResult> {
     .where(eq(committeeMembers.diplomaId, diploma.id))
 
   if (members.length !== 3) {
-    return { ok: false, error: 'Πρέπει πρώτα να οριστεί τριμελής επιτροπή (BR-5).' }
+    return { ok: false, error: 'Πρέπει πρώτα να οριστεί τριμελής επιτροπή.' }
   }
 
   try {

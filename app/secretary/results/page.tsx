@@ -15,8 +15,8 @@ export default async function SecretaryResultsPage() {
         description="Οριστικοποιημένες βαθμολογίες διπλωματικών εργασιών, έτοιμες για καταχώρηση στο φοιτητολόγιο."
       />
       <Notice variant="info" title="Κριτήριο επιτυχίας">
-        Ο τελικός βαθμός προκύπτει ως μέσος όρος των τριών βαθμών της επιτροπής (BR-7). Βαθμός
-        μεγαλύτερος ή ίσος του {PASS_THRESHOLD} θεωρείται επιτυχία (BR-8).
+        Ο τελικός βαθμός προκύπτει ως μέσος όρος των τριών βαθμών της επιτροπής. Βαθμός
+        μεγαλύτερος ή ίσος του {PASS_THRESHOLD} θεωρείται επιτυχία.
       </Notice>
       <ResultsExport topics={completed} allGrades={allGrades} />
     </div>

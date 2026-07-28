@@ -58,8 +58,8 @@ export function ApplicationsList({
   const filtered = list.filter(active.match)
 
   function withdraw(application: Application) {
-    // UC-05 — ανάκληση επιτρέπεται μόνο όσο η δήλωση εκκρεμεί· ο έλεγχος γίνεται
-    // ξανά στον server.
+    // Η ανάκληση επιτρέπεται μόνο όσο η δήλωση εκκρεμεί· ο έλεγχος γίνεται ξανά
+    // στον server.
     startTransition(async () => {
       const result = await withdrawApplication(application.id)
 
@@ -81,13 +81,13 @@ export function ApplicationsList({
     <div className="space-y-5">
       {hasActiveDiploma && activeCount > 0 ? (
         <Notice variant="warning" title="Έχεις ήδη ενεργή διπλωματική εργασία">
-          Σύμφωνα με τον κανόνα BR-1 κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική.
+          Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική.
           Οι {activeCount} εκκρεμείς δηλώσεις σου θα πρέπει να ανακληθούν ή θα απορριφθούν αυτόματα.
         </Notice>
       ) : (
         <Notice variant="info" title={`Ενεργές δηλώσεις: ${activeCount} από ${MAX_ACTIVE_APPLICATIONS}`}>
           Μπορείς να διατηρείς έως {MAX_ACTIVE_APPLICATIONS} ταυτόχρονες εκκρεμείς δηλώσεις
-          ενδιαφέροντος (BR-2). Η ανάκληση είναι δυνατή όσο η δήλωση παραμένει σε εκκρεμότητα.
+          ενδιαφέροντος. Η ανάκληση είναι δυνατή όσο η δήλωση παραμένει σε εκκρεμότητα.
         </Notice>
       )}
 

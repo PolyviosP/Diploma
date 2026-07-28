@@ -261,7 +261,7 @@ async function main() {
   /** topicId → diplomaId, για βαθμούς/παρατηρήσεις/αιτήματα. */
   const diplomaIdByTopic = new Map(diplomaRows.map((d) => [d.topicId, d.id]))
 
-  // BR-5: 3 μέλη, ο επιβλέπων με ρόλο supervisor.
+  // 3 μέλη, ο επιβλέπων με ρόλο supervisor.
   const members = assigned.flatMap((t) =>
     (t.committee ?? []).map((name) => ({
       diplomaId: diplomaIdByTopic.get(t.id)!,

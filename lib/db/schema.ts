@@ -179,7 +179,7 @@ export const diplomas = pgTable(
   'diplomas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    /** BR-3: ένα θέμα → μία διπλωματική. */
+    /** Ένα θέμα → μία διπλωματική. */
     topicId: text('topic_id')
       .notNull()
       .unique()
@@ -195,18 +195,18 @@ export const diplomas = pgTable(
     documentName: text('document_name'),
     /** Μέγεθος προς εμφάνιση (π.χ. '2.4 MB'). Με το MinIO γίνεται bytes. */
     documentSize: text('document_size'),
-    /** Υποβολή κειμένου — προϋπόθεση BR-6. */
+    /** Υποβολή κειμένου — προϋπόθεση για τη βαθμολόγηση. */
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
-    /** Παρουσίαση — προϋπόθεση BR-6. */
+    /** Παρουσίαση — προϋπόθεση για τη βαθμολόγηση. */
     presentedAt: timestamp('presented_at', { withTimezone: true }),
     finalGrade: numeric('final_grade', { precision: 3, scale: 1 }),
-    /** BR-8: επιτυχία με βαθμό ≥ 5. Υπολογίζεται από τη βάση, δεν γράφεται. */
+    /** Επιτυχία με βαθμό ≥ 5. Υπολογίζεται από τη βάση, δεν γράφεται. */
     passed: boolean('passed').generatedAlwaysAs(sql`final_grade >= 5`),
     assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
   (t) => [
-    // BR-1: μία ενεργή διπλωματική ανά φοιτητή.
+    // Μία ενεργή διπλωματική ανά φοιτητή.
     uniqueIndex('one_active_diploma_per_student')
       .on(t.studentId)
       .where(sql`status <> 'completed'`),
@@ -217,7 +217,7 @@ export const diplomas = pgTable(
 /*  Τριμελής επιτροπή                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** BR-5 (ακριβώς 3 μέλη, ακριβώς 1 supervisor) επιβάλλεται με trigger — §12 βήμα 6. */
+/** Ακριβώς 3 μέλη με ακριβώς 1 supervisor — επιβάλλεται με trigger (§12 βήμα 6). */
 export const committeeMembers = pgTable(
   'committee_members',
   {

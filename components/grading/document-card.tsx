@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDate, type Topic } from '@/lib/data'
 
-/** UC-09 / FR-E1 — προβολή του υποβληθέντος τελικού κειμένου. */
+/** Προβολή του υποβληθέντος τελικού κειμένου. */
 export function DocumentCard({ topic }: { topic: Topic }) {
   return (
     <Card>

@@ -53,7 +53,7 @@ export default async function StudentDiplomaPage() {
   const changeRequest = allRequests.find(
     (r) => r.topicId === diploma.id && r.student === me,
   )
-  // UC-13 — οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
+  // Οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
   const gradesVisible = diploma.status === 'completed'
 
   return (

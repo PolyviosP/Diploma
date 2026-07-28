@@ -1,7 +1,7 @@
 'use server'
 
 /**
- * UC-04 — Δήλωση ενδιαφέροντος για θέμα.
+ * Δήλωση ενδιαφέροντος για θέμα.
  *
  * Οι κανόνες ελέγχονται **ξανά εδώ**, server-side. Ο έλεγχος στο UI είναι βοήθημα
  * χρήστη· αυτός εδώ είναι ο μηχανισμός που μετράει, γιατί ο client μπορεί να
@@ -83,7 +83,7 @@ export async function declareInterest(
     }
   }
 
-  /* BR-1: μία ενεργή διπλωματική ανά φοιτητή. */
+  /* Μία ενεργή διπλωματική ανά φοιτητή. */
   const [activeDiploma] = await db
     .select({ id: diplomas.id })
     .from(diplomas)
@@ -96,7 +96,7 @@ export async function declareInterest(
     return { ok: false, error: 'Έχεις ήδη ενεργή διπλωματική εργασία.' }
   }
 
-  /* BR-2: έως 3 ενεργές δηλώσεις. */
+  /* Έως 3 ενεργές δηλώσεις. */
   const [{ active }] = await db
     .select({ active: count() })
     .from(applications)
@@ -136,7 +136,7 @@ export async function declareInterest(
   return { ok: true }
 }
 
-/** UC-05 — ανάκληση εκκρεμούς δήλωσης. Ελευθερώνει μία θέση για το BR-2. */
+/** Ανάκληση εκκρεμούς δήλωσης. Ελευθερώνει μία θέση από το όριο των ενεργών. */
 export async function withdrawApplication(
   applicationId: string,
 ): Promise<DeclareResult> {

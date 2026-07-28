@@ -28,7 +28,7 @@ import {
   type Topic,
 } from '@/lib/data'
 
-/** UC-12 — λήψη αποτελεσμάτων για καταχώρηση στο φοιτητολόγιο. */
+/** Λήψη αποτελεσμάτων για καταχώρηση στο φοιτητολόγιο. */
 export function ResultsExport({
   topics,
   allGrades,
