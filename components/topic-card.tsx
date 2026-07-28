@@ -6,12 +6,17 @@ import type { Topic } from '@/lib/data'
 
 export function TopicCard({ topic, href }: { topic: Topic; href: string }) {
   return (
-    <Card className="flex flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+    <Card className="group relative flex flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-ring/20">
       <div className="flex items-start justify-between gap-3">
         <span className="text-xs font-semibold text-muted-foreground">{topic.id}</span>
         <StatusBadge status={topic.status} />
       </div>
-      <Link href={href} className="mt-3 group">
+      {/*
+        Ο σύνδεσμος του τίτλου απλώνεται με ::after πάνω σε ολόκληρη την κάρτα, ώστε
+        το κλικ οπουδήποτε να ανοίγει τις λεπτομέρειες. Έτσι αποφεύγεται και το
+        φωλιασμένο <a>, που θα ήταν άκυρη HTML αν τυλίγαμε την κάρτα σε Link.
+      */}
+      <Link href={href} className="mt-3 outline-none after:absolute after:inset-0 after:rounded-xl">
         <h3 className="font-serif text-base font-semibold leading-snug text-card-foreground text-balance group-hover:text-primary">
           {topic.title}
         </h3>
@@ -30,13 +35,11 @@ export function TopicCard({ topic, href }: { topic: Topic; href: string }) {
           <User className="size-3.5" />
           {topic.professor}
         </span>
-        <Link
-          href={href}
-          className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
+        {/* Ένδειξη, όχι σύνδεσμος: ο προορισμός είναι ήδη ολόκληρη η κάρτα. */}
+        <span className="flex items-center gap-1 text-xs font-medium text-primary group-hover:underline">
           Λεπτομέρειες
           <ArrowUpRight className="size-3.5" />
-        </Link>
+        </span>
       </div>
     </Card>
   )
