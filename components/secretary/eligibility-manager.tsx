@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, UserPlus, UserMinus, CheckCircle2, XCircle, FileCheck2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -44,8 +44,21 @@ export function EligibilityManager({
   const { toast } = useToast()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const [query, setQuery] = useState('')
+  // Η καθολική αναζήτηση της κεφαλίδας στέλνει εδώ με `?q=<ΑΜ>`.
+  const params = useSearchParams()
+  const linkedQuery = params.get('q') ?? ''
+  const [query, setQuery] = useState(linkedQuery)
   const [filter, setFilter] = useState('all')
+
+  // Το component μένει mounted ανάμεσα σε δύο επισκέψεις από την αναζήτηση, οπότε
+  // το αρχικό state δεν ξαναϋπολογίζεται — το συγχρονίζουμε ρητά.
+  useEffect(() => {
+    if (linkedQuery) {
+      setQuery(linkedQuery)
+      // Ένας συγκεκριμένος ΑΜ πρέπει να φαίνεται ό,τι κατάσταση κι αν έχει.
+      setFilter('all')
+    }
+  }, [linkedQuery])
 
   // Καμία τοπική επικάλυψη: το manualOverride έρχεται από τη βάση.
   const rows = useMemo(

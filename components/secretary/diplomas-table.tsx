@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, SlidersHorizontal, Download, FileSearch } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -41,10 +42,20 @@ export function DiplomasTable({
   allGrades: Grade[]
 }) {
   const { toast } = useToast()
-  const [query, setQuery] = useState('')
+  // Η καθολική αναζήτηση της κεφαλίδας στέλνει εδώ με `?q=`, ώστε ο πίνακας να
+  // ανοίγει ήδη φιλτραρισμένος στην εγγραφή που επέλεξε ο χρήστης.
+  const params = useSearchParams()
+  const linkedQuery = params.get('q') ?? ''
+  const [query, setQuery] = useState(linkedQuery)
   const [status, setStatus] = useState('all')
   const [professor, setProfessor] = useState('all')
   const [year, setYear] = useState('all')
+
+  // Δεύτερη επίσκεψη από την αναζήτηση: το component είναι ήδη mounted, οπότε το
+  // αρχικό state δεν ξαναϋπολογίζεται — το συγχρονίζουμε ρητά.
+  useEffect(() => {
+    if (linkedQuery) setQuery(linkedQuery)
+  }, [linkedQuery])
 
   const years = useMemo(
     () =>

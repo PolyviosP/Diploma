@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from '@/components/shell/nav-config'
 import { LiveData } from '@/components/shell/live-data'
+import { GlobalSearch } from '@/components/shell/global-search'
 import { ROLE_META, NOTIFICATIONS, type Role } from '@/lib/data'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -35,6 +36,7 @@ export function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const nav = NAV_CONFIG[role]
   const meta = ROLE_META[role]
   const unread = NOTIFICATIONS.filter((n) => n.unread).length
@@ -144,16 +146,19 @@ export function DashboardShell({
             <Menu className="size-5" />
           </button>
 
-          <div className="relative hidden max-w-md flex-1 md:block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Αναζήτηση θεμάτων, φοιτητών, κωδικών..."
-              className="h-9 w-full rounded-lg border border-input bg-muted/40 pl-9 pr-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:bg-background focus-visible:ring-3 focus-visible:ring-ring/20"
-            />
-          </div>
+          <GlobalSearch role={role} className="hidden max-w-md flex-1 md:block" />
 
           <div className="ml-auto flex items-center gap-1">
+            {/* Σε μικρές οθόνες η μπάρα δεν χωράει· ανοίγει πάνω από την κεφαλίδα. */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted md:hidden"
+              aria-label="Αναζήτηση"
+            >
+              <Search className="size-5" />
+            </button>
+
             {/* Notifications */}
             <div className="relative">
               <button
@@ -243,6 +248,25 @@ export function DashboardShell({
               ) : null}
             </div>
           </div>
+
+          {searchOpen ? (
+            <div className="absolute inset-x-0 top-0 flex h-16 items-center gap-2 bg-background px-4 md:hidden">
+              <GlobalSearch
+                role={role}
+                className="flex-1"
+                autoFocus
+                onNavigate={() => setSearchOpen(false)}
+              />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted"
+                aria-label="Κλείσιμο αναζήτησης"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+          ) : null}
         </header>
 
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">{children}</main>
