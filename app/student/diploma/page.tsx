@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { FinalTextUpload } from '@/components/student/final-text-upload'
 import { ChangeRequestCard } from '@/components/student/change-request-card'
+import { ReadOnlyNotice } from '@/components/student/read-only-notice'
 import {
   FinalGradeBlock,
   GradeBreakdown,
@@ -53,8 +54,10 @@ export default async function StudentDiplomaPage() {
   const changeRequest = allRequests.find(
     (r) => r.topicId === diploma.id && r.student === me,
   )
-  // Οι επιμέρους βαθμοί αποκαλύπτονται μόνο μετά την ολοκλήρωση.
-  const gradesVisible = diploma.status === 'completed'
+  // Η ολοκλήρωση κλειδώνει τον φάκελο σε μόνο ανάγνωση· είναι και η στιγμή που
+  // αποκαλύπτονται οι επιμέρους βαθμοί της επιτροπής.
+  const readOnly = diploma.status === 'completed'
+  const gradesVisible = readOnly
 
   return (
     <div className="space-y-6">
@@ -62,7 +65,11 @@ export default async function StudentDiplomaPage() {
         <StatusBadge status={diploma.status} />
       </PageHeader>
 
-      {changeRequest ? <ChangeRequestCard request={changeRequest} /> : null}
+      {readOnly ? <ReadOnlyNotice /> : null}
+
+      {changeRequest ? (
+        <ChangeRequestCard request={changeRequest} readOnly={readOnly} />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -88,7 +95,7 @@ export default async function StudentDiplomaPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <FinalTextUpload document={diploma.document} />
+        <FinalTextUpload document={diploma.document} readOnly={readOnly} />
 
         <Card>
           <CardHeader>

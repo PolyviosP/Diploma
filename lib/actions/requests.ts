@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { changeRequests, diplomas, professors, topics, users } from '../db/schema'
 import { currentProfessor, currentStudent } from '../session'
+import { READ_ONLY_ERROR, studentIsLocked } from './lock'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -86,6 +87,7 @@ export async function respondToChangeRequest(
     .select({
       id: changeRequests.id,
       status: changeRequests.status,
+      studentId: diplomas.studentId,
       studentName: users.fullName,
     })
     .from(changeRequests)
@@ -100,6 +102,9 @@ export async function respondToChangeRequest(
   }
   if (request.status !== 'pending_student') {
     return { ok: false, error: 'Το αίτημα δεν αναμένει τη δική σου επιβεβαίωση.' }
+  }
+  if (await studentIsLocked(request.studentId)) {
+    return { ok: false, error: READ_ONLY_ERROR }
   }
 
   await db

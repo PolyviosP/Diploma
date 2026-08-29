@@ -18,6 +18,7 @@ import {
   type Application,
 } from '@/lib/data'
 import { withdrawApplication } from '@/lib/actions/applications'
+import { ReadOnlyNotice } from '@/components/student/read-only-notice'
 
 const FILTERS: { value: string; label: string; match: (a: Application) => boolean }[] = [
   { value: 'all', label: 'Όλες', match: () => true },
@@ -33,9 +34,11 @@ const FILTERS: { value: string; label: string; match: (a: Application) => boolea
 export function ApplicationsList({
   applications,
   hasActiveDiploma,
+  readOnly = false,
 }: {
   applications: Application[]
   hasActiveDiploma: boolean
+  readOnly?: boolean
 }) {
   const { toast } = useToast()
   const router = useRouter()
@@ -79,7 +82,9 @@ export function ApplicationsList({
 
   return (
     <div className="space-y-5">
-      {hasActiveDiploma && activeCount > 0 ? (
+      {readOnly ? (
+        <ReadOnlyNotice />
+      ) : hasActiveDiploma && activeCount > 0 ? (
         <Notice variant="warning" title="Έχεις ήδη ενεργή διπλωματική εργασία">
           Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική.
           Οι {activeCount} εκκρεμείς δηλώσεις σου θα πρέπει να ανακληθούν ή θα απορριφθούν αυτόματα.
@@ -145,7 +150,7 @@ export function ApplicationsList({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {application.status === 'pending' ? (
+                  {application.status === 'pending' && !readOnly ? (
                     <Button
                       variant="outline"
                       size="sm"

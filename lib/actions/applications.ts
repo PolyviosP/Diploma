@@ -22,6 +22,7 @@ import {
   users,
 } from '../db/schema'
 import { currentStudent } from '../session'
+import { READ_ONLY_ERROR, studentIsLocked } from './lock'
 
 export type DeclareResult = { ok: true } | { ok: false; error: string }
 
@@ -46,6 +47,11 @@ export async function declareInterest(
 
   if (!student) {
     return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
+  }
+
+  /* Ολοκληρωμένη διπλωματική → καμία νέα δήλωση, ούτε δεύτερη εργασία. */
+  if (await studentIsLocked(student.userId)) {
+    return { ok: false, error: READ_ONLY_ERROR }
   }
 
   const [topic] = await db
@@ -145,6 +151,7 @@ export async function withdrawApplication(
       id: applications.id,
       status: applications.status,
       topicId: applications.topicId,
+      studentId: applications.studentId,
       studentName: users.fullName,
     })
     .from(applications)
@@ -159,6 +166,9 @@ export async function withdrawApplication(
   }
   if (row.status !== 'pending') {
     return { ok: false, error: 'Μόνο εκκρεμείς δηλώσεις μπορούν να ανακληθούν.' }
+  }
+  if (await studentIsLocked(row.studentId)) {
+    return { ok: false, error: READ_ONLY_ERROR }
   }
 
   await db

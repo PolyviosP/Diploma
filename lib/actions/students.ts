@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { diplomas, students, users } from '../db/schema'
 import { currentStudent } from '../session'
+import { READ_ONLY_ERROR, studentIsLocked } from './lock'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -62,6 +63,7 @@ export async function updateProfile(
 ): Promise<ActionResult> {
   const userId = await currentStudentId()
   if (!userId) return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
+  if (await studentIsLocked(userId)) return { ok: false, error: READ_ONLY_ERROR }
 
   await db
     .update(students)
@@ -76,6 +78,7 @@ export async function updateProfile(
 export async function uploadTranscript(fileName: string): Promise<ActionResult> {
   const userId = await currentStudentId()
   if (!userId) return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
+  if (await studentIsLocked(userId)) return { ok: false, error: READ_ONLY_ERROR }
 
   if (!fileName.toLowerCase().endsWith('.pdf')) {
     return { ok: false, error: 'Επιτρέπονται μόνο αρχεία PDF.' }
@@ -104,6 +107,7 @@ export async function submitFinalText(
 ): Promise<ActionResult> {
   const userId = await currentStudentId()
   if (!userId) return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
+  if (await studentIsLocked(userId)) return { ok: false, error: READ_ONLY_ERROR }
 
   if (!fileName.toLowerCase().endsWith('.pdf')) {
     return { ok: false, error: 'Επιτρέπονται μόνο αρχεία PDF.' }

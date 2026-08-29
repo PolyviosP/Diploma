@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Upload, FileCheck2, CheckCircle2, XCircle } from 'lucide-react'
+import { Save, Upload, FileCheck2, CheckCircle2, XCircle, Lock } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Input, Label } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -21,9 +21,12 @@ import { updateProfile, uploadTranscript as uploadTranscriptAction } from '@/lib
 export function ProfileForm({
   record,
   rules,
+  readOnly = false,
 }: {
   record?: StudentRecord
   rules: EligibilityRules
+  /** Ολοκληρωμένη διπλωματική → αρχειοθετημένος φάκελος, χωρίς επεξεργασία. */
+  readOnly?: boolean
 }) {
   const eligibility = record
     ? checkEligibility(record, rules)
@@ -149,11 +152,21 @@ export function ProfileForm({
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="firstName">Όνομα</Label>
-                <Input id="firstName" value={form.firstName} onChange={update('firstName')} />
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  onChange={update('firstName')}
+                  disabled={readOnly}
+                />
               </div>
               <div>
                 <Label htmlFor="lastName">Επώνυμο</Label>
-                <Input id="lastName" value={form.lastName} onChange={update('lastName')} />
+                <Input
+                  id="lastName"
+                  value={form.lastName}
+                  onChange={update('lastName')}
+                  disabled={readOnly}
+                />
               </div>
               <div>
                 <Label htmlFor="am">Αριθμός Μητρώου</Label>
@@ -161,19 +174,35 @@ export function ProfileForm({
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={form.email} onChange={update('email')} />
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={update('email')}
+                  disabled={readOnly}
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Τηλέφωνο</Label>
-                <Input id="phone" value={form.phone} onChange={update('phone')} />
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={update('phone')}
+                  disabled={readOnly}
+                />
               </div>
               <div>
                 <Label htmlFor="address">Διεύθυνση</Label>
-                <Input id="address" value={form.address} onChange={update('address')} />
+                <Input
+                  id="address"
+                  value={form.address}
+                  onChange={update('address')}
+                  disabled={readOnly}
+                />
               </div>
             </CardContent>
             <CardFooter className="justify-end pt-4">
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" disabled={pending || readOnly}>
                 <Save className="size-4" />
                 Αποθήκευση αλλαγών
               </Button>
@@ -212,20 +241,27 @@ export function ProfileForm({
                 </p>
               </div>
             )}
-            <label
-              className={cn(
-                'flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted',
-              )}
-            >
-              <Upload className="size-4" />
-              {transcript ? 'Ανάρτηση νέας έκδοσης' : 'Ανάρτηση αρχείου PDF'}
-              <input
-                type="file"
-                accept="application/pdf"
-                className="sr-only"
-                onChange={uploadTranscript}
-              />
-            </label>
+            {readOnly ? (
+              <p className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-2 text-sm text-muted-foreground">
+                <Lock className="size-4" />
+                Η ανάρτηση έκλεισε με την ολοκλήρωση της διπλωματικής
+              </p>
+            ) : (
+              <label
+                className={cn(
+                  'flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted',
+                )}
+              >
+                <Upload className="size-4" />
+                {transcript ? 'Ανάρτηση νέας έκδοσης' : 'Ανάρτηση αρχείου PDF'}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="sr-only"
+                  onChange={uploadTranscript}
+                />
+              </label>
+            )}
           </CardContent>
         </Card>
       </div>

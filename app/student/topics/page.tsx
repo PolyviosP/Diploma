@@ -1,22 +1,25 @@
 import { PageHeader } from '@/components/ui/page'
 import { Notice } from '@/components/ui/notice'
 import { TopicSearch } from '@/components/student/topic-search'
+import { ReadOnlyNotice } from '@/components/student/read-only-notice'
 import { MAX_ACTIVE_APPLICATIONS, checkEligibility } from '@/lib/data'
 import {
   getApplicationsOf,
   getAvailableTopics,
   getStudentByName,
   getEligibilityRules,
+  studentIsReadOnly,
 } from '@/lib/db/queries'
 import { currentStudent } from '@/lib/session'
 
 export default async function StudentTopicsPage() {
   const me = await currentStudent()
-  const [available, record, myApplications, rules] = await Promise.all([
+  const [available, record, myApplications, rules, readOnly] = await Promise.all([
     getAvailableTopics(),
     getStudentByName(me),
     getApplicationsOf(me),
     getEligibilityRules(),
+    studentIsReadOnly(me),
   ])
 
   const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
@@ -29,7 +32,9 @@ export default async function StudentTopicsPage() {
         description="Αναζήτησε ανάμεσα στα διαθέσιμα θέματα διπλωματικών και δήλωσε το ενδιαφέρον σου."
       />
 
-      {eligibility.eligible ? (
+      {readOnly ? (
+        <ReadOnlyNotice />
+      ) : eligibility.eligible ? (
         <Notice
           variant="info"
           title={`Ενεργές δηλώσεις ενδιαφέροντος: ${activeApplications}/${MAX_ACTIVE_APPLICATIONS}`}

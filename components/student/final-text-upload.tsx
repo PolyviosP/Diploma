@@ -2,7 +2,7 @@
 
 import { useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileText, CheckCircle2 } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, Lock } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -24,8 +24,11 @@ function humanSize(bytes: number) {
  */
 export function FinalTextUpload({
   document,
+  readOnly = false,
 }: {
   document?: { name: string; size: string; submittedAt: string }
+  /** Μετά την ολοκλήρωση δεν ανεβαίνει νέα έκδοση — μόνο προβολή. */
+  readOnly?: boolean
 }) {
   const { toast } = useToast()
   const router = useRouter()
@@ -81,31 +84,42 @@ export function FinalTextUpload({
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-4 py-8 text-center">
             <Upload className="size-6 text-muted-foreground" />
             <p className="mt-2 text-sm text-muted-foreground">
-              Επίλεξε το τελικό κείμενο σε μορφή PDF
+              {readOnly
+                ? 'Δεν υποβλήθηκε τελικό κείμενο.'
+                : 'Επίλεξε το τελικό κείμενο σε μορφή PDF'}
             </p>
           </div>
         )}
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf"
-          className="sr-only"
-          onChange={onFile}
-        />
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={pending}
-          onClick={() => inputRef.current?.click()}
-        >
-          <Upload className="size-4" />
-          {pending
-            ? 'Υποβολή...'
-            : document
-              ? 'Μεταφόρτωση νέας έκδοσης'
-              : 'Μεταφόρτωση αρχείου'}
-        </Button>
+        {readOnly ? (
+          <p className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-2 text-sm text-muted-foreground">
+            <Lock className="size-4" />
+            Η υποβολή έκλεισε με την ολοκλήρωση της διπλωματικής
+          </p>
+        ) : (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf"
+              className="sr-only"
+              onChange={onFile}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={pending}
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload className="size-4" />
+              {pending
+                ? 'Υποβολή...'
+                : document
+                  ? 'Μεταφόρτωση νέας έκδοσης'
+                  : 'Μεταφόρτωση αρχείου'}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   )

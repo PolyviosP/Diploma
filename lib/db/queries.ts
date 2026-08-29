@@ -441,6 +441,22 @@ export async function getEligibilityRules() {
   }
 }
 
+/**
+ * Μετά την ολοκλήρωση της διπλωματικής ο φάκελος του φοιτητή αρχειοθετείται:
+ * τα δεδομένα παραμένουν ορατά, καμία εγγραφή δεν γίνεται δεκτή. Η συνάρτηση
+ * τροφοδοτεί το UI — το ίδιο κριτήριο επιβάλλεται server-side στο lib/actions/lock.ts.
+ */
+export async function studentIsReadOnly(studentName: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: diplomas.id })
+    .from(diplomas)
+    .innerJoin(users, eq(diplomas.studentId, users.id))
+    .where(and(eq(users.fullName, studentName), eq(diplomas.status, 'completed')))
+    .limit(1)
+
+  return Boolean(row)
+}
+
 /** Έχει ο φοιτητής ήδη ενεργή διπλωματική; */
 export async function studentHasActiveDiploma(studentName: string): Promise<boolean> {
   const [row] = await db

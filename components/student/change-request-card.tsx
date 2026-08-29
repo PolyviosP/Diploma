@@ -15,7 +15,14 @@ import { respondToChangeRequest } from '@/lib/actions/requests'
  * UC — Επιβεβαίωση τροποποίησης θέματος από τον φοιτητή.
  * Μετά την επιβεβαίωση το αίτημα προωθείται στη γραμματεία για τελική έγκριση.
  */
-export function ChangeRequestCard({ request }: { request: ChangeRequest }) {
+export function ChangeRequestCard({
+  request,
+  readOnly = false,
+}: {
+  request: ChangeRequest
+  /** Με ολοκληρωμένη διπλωματική το αίτημα δεν απαντιέται πλέον. */
+  readOnly?: boolean
+}) {
   const { toast } = useToast()
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -91,7 +98,7 @@ export function ChangeRequestCard({ request }: { request: ChangeRequest }) {
         </div>
       </CardContent>
 
-      {pending ? (
+      {pending && !readOnly ? (
         <CardFooter className="justify-end">
           <Button variant="outline" onClick={() => setRejectOpen(true)}>
             <X className="size-4" />
@@ -105,11 +112,13 @@ export function ChangeRequestCard({ request }: { request: ChangeRequest }) {
       ) : (
         <CardFooter>
           <p className="text-sm text-muted-foreground">
-            {status === 'pending_secretary'
-              ? 'Το αίτημα εκκρεμεί προς έγκριση από τη γραμματεία.'
-              : status === 'approved'
-                ? 'Το αίτημα εγκρίθηκε και ο τίτλος ενημερώθηκε.'
-                : 'Το αίτημα απορρίφθηκε.'}
+            {pending
+              ? 'Η διπλωματική ολοκληρώθηκε — το αίτημα δεν μπορεί πλέον να απαντηθεί.'
+              : status === 'pending_secretary'
+                ? 'Το αίτημα εκκρεμεί προς έγκριση από τη γραμματεία.'
+                : status === 'approved'
+                  ? 'Το αίτημα εγκρίθηκε και ο τίτλος ενημερώθηκε.'
+                  : 'Το αίτημα απορρίφθηκε.'}
           </p>
         </CardFooter>
       )}

@@ -16,6 +16,7 @@ import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { TopicCard } from '@/components/topic-card'
 import { ChangeRequestCard } from '@/components/student/change-request-card'
+import { ReadOnlyNotice } from '@/components/student/read-only-notice'
 import { MAX_ACTIVE_APPLICATIONS, STATUS_META, checkEligibility, formatDate } from '@/lib/data'
 import {
   getAllTopics,
@@ -23,19 +24,22 @@ import {
   getChangeRequests,
   getStudentByName,
   getEligibilityRules,
+  studentIsReadOnly,
 } from '@/lib/db/queries'
 import { currentStudent } from '@/lib/session'
 
 export default async function StudentDashboard() {
   const me = await currentStudent()
 
-  const [record, allTopics, allApplications, allRequests, rules] = await Promise.all([
-    getStudentByName(me),
-    getAllTopics(),
-    getApplications(),
-    getChangeRequests(),
-    getEligibilityRules(),
-  ])
+  const [record, allTopics, allApplications, allRequests, rules, readOnly] =
+    await Promise.all([
+      getStudentByName(me),
+      getAllTopics(),
+      getApplications(),
+      getChangeRequests(),
+      getEligibilityRules(),
+      studentIsReadOnly(me),
+    ])
 
   const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
 
@@ -59,7 +63,9 @@ export default async function StudentDashboard() {
         </Button>
       </PageHeader>
 
-      {!eligibility.eligible ? (
+      {readOnly ? <ReadOnlyNotice /> : null}
+
+      {!readOnly && !eligibility.eligible ? (
         <Notice variant="danger" title="Δεν πληροίς τις προϋποθέσεις ανάληψης διπλωματικής">
           <ul className="list-inside list-disc space-y-0.5">
             {eligibility.reasons.map((reason) => (
@@ -69,7 +75,9 @@ export default async function StudentDashboard() {
         </Notice>
       ) : null}
 
-      {pendingChangeRequest ? <ChangeRequestCard request={pendingChangeRequest} /> : null}
+      {pendingChangeRequest ? (
+        <ChangeRequestCard request={pendingChangeRequest} readOnly={readOnly} />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard

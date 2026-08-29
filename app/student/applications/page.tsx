@@ -1,13 +1,18 @@
 import { PageHeader } from '@/components/ui/page'
 import { ApplicationsList } from '@/components/student/applications-list'
-import { getApplicationsOf, studentHasActiveDiploma } from '@/lib/db/queries'
+import {
+  getApplicationsOf,
+  studentHasActiveDiploma,
+  studentIsReadOnly,
+} from '@/lib/db/queries'
 import { currentStudent } from '@/lib/session'
 
 export default async function StudentApplicationsPage() {
   const me = await currentStudent()
-  const [applications, hasActiveDiploma] = await Promise.all([
+  const [applications, hasActiveDiploma, readOnly] = await Promise.all([
     getApplicationsOf(me),
     studentHasActiveDiploma(me),
+    studentIsReadOnly(me),
   ])
 
   return (
@@ -16,7 +21,11 @@ export default async function StudentApplicationsPage() {
         title="Οι δηλώσεις μου"
         description="Παρακολούθησε την κατάσταση των δηλώσεων ενδιαφέροντος και ανάκαλεσε όσες εκκρεμούν."
       />
-      <ApplicationsList applications={applications} hasActiveDiploma={hasActiveDiploma} />
+      <ApplicationsList
+        applications={applications}
+        hasActiveDiploma={hasActiveDiploma}
+        readOnly={readOnly}
+      />
     </div>
   )
 }

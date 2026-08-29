@@ -17,6 +17,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Notice } from '@/components/ui/notice'
 import { WorkflowSteps } from '@/components/workflow-steps'
 import { DeclareInterest, type DeclareBlock } from '@/components/student/declare-interest'
+import { ReadOnlyNotice } from '@/components/student/read-only-notice'
 import { MAX_ACTIVE_APPLICATIONS, checkEligibility, formatDate } from '@/lib/data'
 import {
   getApplicationsOf,
@@ -24,6 +25,7 @@ import {
   getTopicById,
   studentHasActiveDiploma,
   getEligibilityRules,
+  studentIsReadOnly,
 } from '@/lib/db/queries'
 import { currentStudent } from '@/lib/session'
 
@@ -37,11 +39,12 @@ export default async function TopicDetailPage({
   const topic = await getTopicById(id)
   if (!topic) notFound()
 
-  const [record, myApplications, hasActiveDiploma, rules] = await Promise.all([
+  const [record, myApplications, hasActiveDiploma, rules, readOnly] = await Promise.all([
     getStudentByName(me),
     getApplicationsOf(me),
     studentHasActiveDiploma(me),
     getEligibilityRules(),
+    studentIsReadOnly(me),
   ])
 
   const eligibility = record ? checkEligibility(record, rules) : { eligible: false, reasons: [] }
@@ -50,27 +53,34 @@ export default async function TopicDetailPage({
     (a) => a.topicId === topic.id && (a.status === 'pending' || a.status === 'approved'),
   )
 
-  // Έλεγχοι πριν τη δήλωση ενδιαφέροντος: προϋποθέσεις, ενεργή διπλωματική, όριο
-  // ενεργών δηλώσεων.
-  const block: DeclareBlock = !eligibility.eligible
+  // Έλεγχοι πριν τη δήλωση ενδιαφέροντος: αρχειοθετημένος φάκελος, προϋποθέσεις,
+  // ενεργή διπλωματική, όριο ενεργών δηλώσεων.
+  const block: DeclareBlock = readOnly
     ? {
         blocked: true,
-        title: 'Δεν πληρείς τις προϋποθέσεις',
-        detail: eligibility.reasons.join(' '),
+        title: 'Ολοκληρωμένη διπλωματική',
+        detail:
+          'Η διπλωματική σου έχει ολοκληρωθεί και ο φάκελός σου είναι σε κατάσταση μόνο ανάγνωσης.',
       }
-    : hasActiveDiploma
+    : !eligibility.eligible
       ? {
           blocked: true,
-          title: 'Έχεις ήδη διπλωματική',
-          detail: 'Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική εργασία.',
+          title: 'Δεν πληρείς τις προϋποθέσεις',
+          detail: eligibility.reasons.join(' '),
         }
-      : activeApplications >= MAX_ACTIVE_APPLICATIONS
+      : hasActiveDiploma
         ? {
             blocked: true,
-            title: 'Όριο δηλώσεων',
-            detail: `Έχεις ήδη ${MAX_ACTIVE_APPLICATIONS} ενεργές δηλώσεις ενδιαφέροντος.`,
+            title: 'Έχεις ήδη διπλωματική',
+            detail: 'Κάθε φοιτητής μπορεί να έχει μία μόνο ενεργή διπλωματική εργασία.',
           }
-        : { blocked: false }
+        : activeApplications >= MAX_ACTIVE_APPLICATIONS
+          ? {
+              blocked: true,
+              title: 'Όριο δηλώσεων',
+              detail: `Έχεις ήδη ${MAX_ACTIVE_APPLICATIONS} ενεργές δηλώσεις ενδιαφέροντος.`,
+            }
+          : { blocked: false }
 
   return (
     <div className="space-y-6">
@@ -94,7 +104,9 @@ export default async function TopicDetailPage({
         ) : null}
       </PageHeader>
 
-      {topic.status === 'available' && block.blocked ? (
+      {readOnly ? <ReadOnlyNotice /> : null}
+
+      {!readOnly && topic.status === 'available' && block.blocked ? (
         <Notice
           variant={eligibility.eligible ? 'warning' : 'danger'}
           title={
