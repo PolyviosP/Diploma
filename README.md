@@ -260,6 +260,7 @@ Keycloak δουλεύει είτε το username είτε το email.
 | Φοιτητής | `a.vasileiou` | `a.vasileiou@uni.gr` | `diploma` | Άννα Βασιλείου |
 | Φοιτητής | `g.lekkas` | `g.lekkas@uni.gr` | `diploma` | Γιώργος Λέκκας |
 | Φοιτητής | `r.bitsis` | `r.bitsis@uni.gr` | `diploma` | Ραφαήλ Μπίτσης |
+| Φοιτητής | `p.patseadis` | `p.patseadis@uni.gr` | `diploma` | Πολύβιος Πατσεάδης |
 | Γραμματεία | `grammateia` | `grammateia@uni.gr` | `diploma` | Γραμματεία Τμήματος |
 
 Admin console του Keycloak: <http://localhost:8080> με `admin` / `admin`.
@@ -272,6 +273,7 @@ Admin console του Keycloak: <http://localhost:8080> με `admin` / `admin`.
 | `e.papadopoulou` | Φοιτήτρια με ενεργή διπλωματική σε εξέλιξη |
 | `k.pavlou` | Δικαιούχος χωρίς χειροκίνητη παρέμβαση — 0 οφειλόμενα, 240 μονάδες |
 | `g.lekkas` | **Μη** δικαιούχος (3ο έτος, 11 οφειλόμενα, 132 μονάδες) — δείχνει τον αποκλεισμό του BR-1 |
+| `p.patseadis` | Δικαιούχος **χωρίς** ανατεθειμένη διπλωματική — το «άδειο» σενάριο: αναζήτηση θεμάτων και πρώτη δήλωση ενδιαφέροντος |
 | `grammateia` | Εποπτεία όλων, δικαιούχοι, εγκρίσεις, εξαγωγή CSV |
 
 Για εναλλαγή χρήστη: «Αποσύνδεση» από το sidebar και ξανά σύνδεση. Η αποσύνδεση κλείνει και

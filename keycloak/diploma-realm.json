@@ -187,6 +187,17 @@
     },
 
     {
+      "username": "p.patseadis",
+      "email": "p.patseadis@uni.gr",
+      "firstName": "Πολύβιος",
+      "lastName": "Πατσεάδης",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+
+    {
       "username": "grammateia",
       "email": "grammateia@uni.gr",
       "firstName": "Γραμματεία",
