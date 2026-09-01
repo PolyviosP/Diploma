@@ -25,6 +25,41 @@ services:
       retries: 10
       start_period: 10s
 
+  # Ο Identity Provider. Στην ανάπτυξη σηκώνεται με `start-dev` (ενσωματωμένη H2,
+  # χωρίς HTTPS) και εισάγει το realm από το ./keycloak — ρόλοι, client και
+  # χρήστες επίδειξης υπάρχουν χωρίς κανένα κλικ στο admin console.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.3
+    container_name: diploma-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Καρφωμένο frontend URL: το `iss` των tokens πρέπει να είναι το ίδιο για
+      # όλους. Ο browser μιλάει στο localhost:8080, ενώ η εφαρμογή σε container
+      # μιλάει στο keycloak:8080 — χωρίς αυτό θα έβγαιναν δύο διαφορετικά `iss`
+      # και η επαλήθευση του id_token θα αποτύγχανε.
+      KC_HOSTNAME: http://localhost:8080
+      # Τα backchannel endpoints (token, certs) ακολουθούν το hostname της
+      # αίτησης, ώστε να δουλεύουν και από μέσα από το δίκτυο του compose.
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+      - keycloak-data:/opt/keycloak/data
+    # Η εικόνα δεν έχει curl ούτε wget· ο έλεγχος γίνεται με το /dev/tcp του bash
+    # στο management port (9000), που το KC_HEALTH_ENABLED ενεργοποιεί.
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
   # One-shot: τρέχει, κάνει τη δουλειά του, τερματίζει. Χωρίς αυτό η εφαρμογή σε
   # καθαρό μηχάνημα βρίσκει άδεια βάση και κάθε σελίδα σκάει με «relation does
   # not exist» — τα migrations έτρεχαν μέχρι τώρα μόνο χειροκίνητα από τον host.
@@ -52,6 +87,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Χωρίς έτοιμο IdP η πρώτη σύνδεση σκάει σε discovery error.
+      keycloak:
+        condition: service_healthy
       # Η εφαρμογή ξεκινά μόνο αφού το σχήμα υπάρχει. Αν το migrate αποτύχει,
       # το compose δεν σηκώνει καθόλου την εφαρμογή αντί να τη δείξει σπασμένη.
       migrate:
@@ -68,6 +106,16 @@ services:
       NODE_ENV: production
       # Μέσα στο δίκτυο του compose η βάση είναι στο hostname "postgres", όχι localhost.
       DATABASE_URL: postgresql://diploma:diploma@postgres:5432/diploma
+      AUTH_URL: http://localhost:3000
+      # Πίσω από το port mapping του compose το Next βλέπει http, όχι https.
+      AUTH_TRUST_HOST: "true"
+      AUTH_SECRET: ${AUTH_SECRET:?ορίστε AUTH_SECRET στο .env.local}
+      AUTH_KEYCLOAK_ID: diploma-app
+      AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_SECRET:-diploma-app-secret}
+      # Δημόσιο issuer: εκεί στέλνεται ο browser και αυτό είναι το `iss`.
+      AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/diploma
+      # Εσωτερικό: από εδώ ζητά ο server tokens και κλειδιά, χωρίς να βγει έξω.
+      KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/diploma
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -77,6 +125,7 @@ services:
 
 volumes:
   postgres-data:
+  keycloak-data:
 
-# Επόμενα βήματα (PROJECT_SPEC.md §12): minio → keycloak, χωρίς profile,
-# με healthcheck και named volume το καθένα.
+# Επόμενο βήμα (PROJECT_SPEC.md §12): minio, χωρίς profile, με healthcheck και
+# named volume.

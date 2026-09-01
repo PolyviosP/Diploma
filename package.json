@@ -5,7 +5,7 @@
   "scripts": {
     "up": "docker compose --profile app up --build",
     "down": "docker compose down",
-    "dev": "docker compose up -d --wait postgres && next dev",
+    "dev": "docker compose up -d --wait postgres keycloak && next dev",
     "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
     "db:up": "docker compose up -d --wait postgres",
     "build": "next build",
@@ -24,6 +24,7 @@
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
+    "next-auth": "^5.0.0-beta.32",
     "postgres": "^3.4.9",
     "react": "^19",
     "react-dom": "^19",

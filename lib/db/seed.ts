@@ -16,6 +16,7 @@ import {
   ELIGIBILITY_RULES,
   GRADES,
   PROFESSORS,
+  ROLE_META,
   STUDENTS,
   TOPICS,
 } from '../data'
@@ -71,6 +72,19 @@ async function main() {
     maxOwedCourses: ELIGIBILITY_RULES.maxOwedCourses,
     minCredits: ELIGIBILITY_RULES.minCredits,
   })
+
+  /* ---------------------------------------------------------------- γραμματεία */
+
+  // Η γραμματεία δεν είναι πρόσωπο του μητρώου (δεν έχει `students` ή
+  // `professors` γραμμή), χρειάζεται όμως χρήστη: μετά το Keycloak η σύνδεση
+  // γίνεται με email, και χωρίς εγγραφή εδώ ο λογαριασμός `grammateia@uni.gr`
+  // του realm θα απορριπτόταν ως άγνωστος.
+  await db.insert(users).values({
+    email: 'grammateia@uni.gr',
+    fullName: ROLE_META.secretary.person,
+    role: 'secretary' as const,
+  })
+  console.log('  1 γραμματεία')
 
   /* -------------------------------------------------------------- διδάσκοντες */
 

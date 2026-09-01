@@ -11,7 +11,6 @@ import {
   Search,
   ChevronDown,
   LogOut,
-  Repeat,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from '@/components/shell/nav-config'
@@ -92,13 +91,16 @@ export function DashboardShell({
       </nav>
 
       <div className="border-t border-sidebar-border p-3">
-        <Link
-          href="/"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-primary/5 hover:text-sidebar-accent-foreground"
-        >
-          <Repeat className="size-4.5" />
-          Αλλαγή ρόλου
-        </Link>
+        {/* Native form post: η αποσύνδεση αλλάζει κατάσταση, δεν είναι ανάγνωση. */}
+        <form action="/logout" method="post">
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-primary/5 hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="size-4.5" />
+            Αποσύνδεση
+          </button>
+        </form>
       </div>
     </div>
   )
@@ -236,13 +238,15 @@ export function DashboardShell({
                     <p className="text-xs text-muted-foreground">{detail}</p>
                   </div>
                   <div className="p-1">
-                    <Link
-                      href="/"
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-muted"
-                    >
-                      <LogOut className="size-4" />
-                      Αλλαγή χρήστη
-                    </Link>
+                    <form action="/logout" method="post">
+                      <button
+                        type="submit"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-popover-foreground transition-colors hover:bg-muted"
+                      >
+                        <LogOut className="size-4" />
+                        Αποσύνδεση
+                      </button>
+                    </form>
                   </div>
                 </div>
               ) : null}
