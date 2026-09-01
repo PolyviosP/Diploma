@@ -19,13 +19,12 @@ access token: εκεί το διαβάζει το [`lib/auth/identity.ts`](../li
 
 ## Χρήστες επίδειξης
 
-| Χρήστης | Ρόλος |
-|---|---|
-| `g.antoniou`, `m.konstantinou`, `n.dimou`, `e.spanou`, `p.rigas` | διδάσκων |
-| `e.papadopoulou`, `d.ioannou`, `s.makri`, `k.pavlou`, `a.vasileiou`, `g.lekkas`, `r.bitsis` | φοιτητής |
-| `grammateia` | γραμματεία |
+Κωδικός για όλους: **`diploma`**. Δουλεύει και το username και το email
+(`loginWithEmailAllowed`). Ο πλήρης πίνακας — ονόματα, emails, από πού να ξεκινήσεις —
+είναι στο [README του project](../README.md#λογαριασμοί-επίδειξης), ώστε να μη
+συντηρούνται δύο λίστες.
 
-Κωδικός: `diploma`. Admin console: <http://localhost:8080> με `admin` / `admin`.
+Admin console: <http://localhost:8080> με `admin` / `admin`.
 
 > Το `secret` του client (`diploma-app-secret`) είναι fixture ανάπτυξης, όχι μυστικό
 > παραγωγής. Σε πραγματική εγκατάσταση παράγεται νέο από το admin console και δίνεται
