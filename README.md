@@ -125,6 +125,7 @@ Keycloak, κλειδιά του MinIO — φτιάχνεις `.env.local`, πο�
 | `npm run db:generate` | Παράγει SQL migration από αλλαγές στο [`lib/db/schema.ts`](lib/db/schema.ts) |
 | `npm run db:migrate` | Εφαρμόζει τα migrations |
 | `npm run db:seed` | Γεμίζει τη βάση από το [`lib/data.ts`](lib/data.ts) (idempotent) |
+| `npm run db:reset-student -- <email>` | Επαναφέρει έναν φοιτητή στο «άδειο» σενάριο: σβήνει δηλώσεις και διπλωματική, τα θέματα ξαναγίνονται διαθέσιμα |
 | `npm run db:studio` | Drizzle Studio — περιήγηση και επεξεργασία των δεδομένων |
 
 #### 🔗 Drizzle Studio — γραφική περιήγηση στη βάση

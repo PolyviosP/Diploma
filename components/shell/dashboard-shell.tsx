@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -36,6 +36,47 @@ export function DashboardShell({
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Τα dropdown του header κλείνουν με κλικ οπουδήποτε αλλού ή με Escape. Ο
+  // listener στο document μπαίνει μόνο όσο κάτι είναι ανοιχτό, ώστε να μη
+  // «γράφει» η σελίδα σε κάθε κλικ χωρίς λόγο.
+  //
+  // `pointerdown` και όχι `click`: κλείνει με το πάτημα, και δεν χάνεται το
+  // γεγονός όταν το στοιχείο κάτω από τον δείκτη προλάβει να αφαιρεθεί.
+  useEffect(() => {
+    if (!notifOpen && !profileOpen) return
+
+    const closeAll = () => {
+      setNotifOpen(false)
+      setProfileOpen(false)
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      // Κλικ μέσα στο ίδιο το dropdown ή στο κουμπί του — δεν το κλείνει· το
+      // toggle του κουμπιού κάνει ήδη τη δουλειά.
+      if (notifRef.current?.contains(target) || profileRef.current?.contains(target)) {
+        return
+      }
+      closeAll()
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeAll()
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [notifOpen, profileOpen])
+
   const nav = NAV_CONFIG[role]
   const meta = ROLE_META[role]
   const unread = NOTIFICATIONS.filter((n) => n.unread).length
@@ -162,7 +203,7 @@ export function DashboardShell({
             </button>
 
             {/* Notifications */}
-            <div className="relative">
+            <div className="relative" ref={notifRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -215,7 +256,7 @@ export function DashboardShell({
             </div>
 
             {/* Profile */}
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 type="button"
                 onClick={() => {
