@@ -22,10 +22,9 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 - [x] **PostgreSQL 16 + Drizzle ORM** — σχήμα, migrations, seed
 - [x] **Server Actions** — η μοναδική διαδρομή εγγραφής, με έλεγχο ιδιοκτησίας σε κάθε κλήση
 - [x] **Επιβολή των business rules server-side** — σε constraints της βάσης όπου γίνεται
-- [x] Session με httpOnly cookie (σκαλωσιά — αντικαθίσταται από Keycloak)
+- [x] **Αυθεντικοποίηση με Keycloak** — OIDC Authorization Code + PKCE, ρόλοι από το realm
 - [x] Εξαγωγή αποτελεσμάτων σε CSV
 - [x] Containerization — τρέχει με μία εντολή, χωρίς εγκατεστημένο Node
-- [ ] Αυθεντικοποίηση (Keycloak / SSO)
 - [ ] Πραγματικό upload αρχείων (MinIO) — σήμερα αποθηκεύεται μόνο το όνομα αρχείου
 
 ---
@@ -40,6 +39,7 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 | **Βάση δεδομένων** | **PostgreSQL 16.4** (container, named volume) |
 | **ORM / migrations** | **Drizzle ORM 0.45** + `drizzle-kit` · driver `postgres.js` |
 | **Write layer** | **Next.js Server Actions** — χωρίς ξεχωριστό REST API |
+| **Αυθεντικοποίηση** | **Keycloak 26.7** (OIDC) + **Auth.js v5** (`next-auth`) |
 | Styling | Tailwind CSS v4 (CSS-first config, χωρίς `tailwind.config`) |
 | Primitives | Base UI (`@base-ui/react`) — shadcn style `base-nova` |
 | Εικονίδια | lucide-react |
@@ -98,7 +98,7 @@ Package manager: **npm** — το `package-lock.json` είναι το μοναδ
 npm install
 npm run db:migrate         # δημιουργία σχήματος
 npm run db:seed            # δεδομένα επίδειξης
-npm run dev                # σηκώνει PostgreSQL + εφαρμογή
+npm run dev                # σηκώνει PostgreSQL + Keycloak + εφαρμογή
 ```
 
 Άνοιξε το [http://localhost:3000](http://localhost:3000).
@@ -110,9 +110,10 @@ npm run dev                # σηκώνει PostgreSQL + εφαρμογή
 Keycloak, κλειδιά του MinIO — φτιάχνεις `.env.local`, που μένει εκτός git και έχει
 προτεραιότητα έναντι του `.env`.
 
-Το `npm run dev` σηκώνει **πρώτα την PostgreSQL** (`docker compose up -d --wait postgres`)
-και περιμένει να περάσει το healthcheck πριν ξεκινήσει το `next dev` — δεν χρειάζεται
-ξεχωριστό βήμα, ούτε να θυμάσαι ποιο container λείπει.
+Το `npm run dev` σηκώνει **πρώτα PostgreSQL και Keycloak**
+(`docker compose up -d --wait postgres keycloak`) και περιμένει να περάσουν τα healthchecks
+πριν ξεκινήσει το `next dev` — δεν χρειάζεται ξεχωριστό βήμα, ούτε να θυμάσαι ποιο container
+λείπει. Το Keycloak θέλει ~20 δευτερόλεπτα την πρώτη φορά, όσο εισάγει το realm.
 
 Η εφαρμογή τρέχει **native, όχι σε container** — δες [Γιατί έτσι](#γιατί-έτσι) παρακάτω.
 Η βάση όμως τρέχει σε container: δεν χρειάζεται να εγκαταστήσεις PostgreSQL.
@@ -124,6 +125,7 @@ Keycloak, κλειδιά του MinIO — φτιάχνεις `.env.local`, πο�
 | `npm run db:generate` | Παράγει SQL migration από αλλαγές στο [`lib/db/schema.ts`](lib/db/schema.ts) |
 | `npm run db:migrate` | Εφαρμόζει τα migrations |
 | `npm run db:seed` | Γεμίζει τη βάση από το [`lib/data.ts`](lib/data.ts) (idempotent) |
+| `npm run db:reset-student -- <email>` | Επαναφέρει έναν φοιτητή στο «άδειο» σενάριο: σβήνει δηλώσεις και διπλωματική, τα θέματα ξαναγίνονται διαθέσιμα |
 | `npm run db:studio` | Drizzle Studio — περιήγηση και επεξεργασία των δεδομένων |
 
 #### 🔗 Drizzle Studio — γραφική περιήγηση στη βάση
@@ -227,25 +229,93 @@ container της εφαρμογής μόνο όταν ζητηθεί ρητά. �
 
 ## Ρόλοι
 
-Η αρχική σελίδα λειτουργεί ως **επιλογέας ρόλου και ταυτότητας**. Δεν υπάρχει πραγματικό
-login: διαλέγεις ποιος φοιτητής και ποιος διδάσκων είσαι από τα δύο dropdown —
-συμπληρωμένα από τη βάση, όχι από σταθερές — και μπαίνεις στο αντίστοιχο dashboard. Η
-εναλλαγή γίνεται από το «Αλλαγή ρόλου» στο sidebar ή το «Αλλαγή χρήστη» στο μενού προφίλ.
+Η αρχική σελίδα είναι **οθόνη σύνδεσης**: το κουμπί ξεκινά ροή OIDC προς το Keycloak και
+ο κωδικός δίνεται εκεί, ποτέ σε αυτή την εφαρμογή. Ο ρόλος έρχεται από το realm role του
+token, οπότε δεν επιλέγεται — προκύπτει.
 
-| Ρόλος | Διαδρομή | Ταυτότητα | Τι κάνει |
+| Ρόλος | Διαδρομή | Realm role | Τι κάνει |
 |---|---|---|---|
-| Φοιτητής | `/student` | επιλέξιμη, 7 φοιτητές | Αναζήτηση θεμάτων, δηλώσεις, υποβολή κειμένου, προβολή βαθμού |
-| Διδάσκων | `/professor` | επιλέξιμη, 5 διδάσκοντες | Θέματα, ανάθεση φοιτητή, ορισμός τριμελούς, **αξιολογήσεις**, τροποποιήσεις |
-| Γραμματεία | `/secretary` | σταθερή περσόνα | Εποπτεία, δικαιούχοι φοιτητές, εγκρίσεις, CSV |
+| Φοιτητής | `/student` | `student` | Αναζήτηση θεμάτων, δηλώσεις, υποβολή κειμένου, προβολή βαθμού |
+| Διδάσκων | `/professor` | `professor` | Θέματα, ανάθεση φοιτητή, ορισμός τριμελούς, **αξιολογήσεις**, τροποποιήσεις |
+| Γραμματεία | `/secretary` | `secretary` | Εποπτεία, δικαιούχοι φοιτητές, εγκρίσεις, CSV |
 
-Η επιλογή αποθηκεύεται σε **httpOnly cookie** και διαβάζεται από το
-[`lib/session.ts`](lib/session.ts) — τόσο στα Server Components (τι βλέπεις) όσο και στα
-Server Actions (ποιος γράφει στη βάση). Το `signIn` δέχεται μόνο ονόματα που υπάρχουν στο
-μητρώο, οπότε χειροποίητο cookie δεν σε κάνει κάποιον άλλον.
+### Λογαριασμοί επίδειξης
 
-> Είναι σκαλωσιά για δοκιμές, όχι ταυτοποίηση: όποιος φτάσει στη σελίδα διαλέγει ό,τι θέλει.
-> Αντικαθίσταται από το Keycloak, όπου η αναζήτηση γίνεται με `users.keycloak_sub` αντί για
-> ονοματεπώνυμο (PROJECT_SPEC §12 βήμα 6).
+Όλοι υπάρχουν στο realm ([`keycloak/diploma-realm.json`](keycloak/diploma-realm.json)) και
+στο seed ([`lib/db/seed.ts`](lib/db/seed.ts)) — τα δύο δένουν με το email. Στην οθόνη του
+Keycloak δουλεύει είτε το username είτε το email.
+
+**Κωδικός για όλους: `diploma`**
+
+| Ρόλος | Username | Email | Κωδικός | Ποιος είναι |
+|---|---|---|---|---|
+| Διδάσκων | `g.antoniou` | `g.antoniou@uni.gr` | `diploma` | Δρ. Γεώργιος Αντωνίου |
+| Διδάσκων | `m.konstantinou` | `m.konstantinou@uni.gr` | `diploma` | Δρ. Μαρία Κωνσταντίνου |
+| Διδάσκων | `n.dimou` | `n.dimou@uni.gr` | `diploma` | Δρ. Νικόλαος Δήμου |
+| Διδάσκων | `e.spanou` | `e.spanou@uni.gr` | `diploma` | Δρ. Ελευθερία Σπανού |
+| Διδάσκων | `p.rigas` | `p.rigas@uni.gr` | `diploma` | Δρ. Παύλος Ρήγας |
+| Φοιτητής | `e.papadopoulou` | `e.papadopoulou@uni.gr` | `diploma` | Ελένη Παπαδοπούλου |
+| Φοιτητής | `d.ioannou` | `d.ioannou@uni.gr` | `diploma` | Δημήτρης Ιωάννου |
+| Φοιτητής | `s.makri` | `s.makri@uni.gr` | `diploma` | Σοφία Μακρή |
+| Φοιτητής | `k.pavlou` | `k.pavlou@uni.gr` | `diploma` | Κωνσταντίνος Παύλου |
+| Φοιτητής | `a.vasileiou` | `a.vasileiou@uni.gr` | `diploma` | Άννα Βασιλείου |
+| Φοιτητής | `g.lekkas` | `g.lekkas@uni.gr` | `diploma` | Γιώργος Λέκκας |
+| Φοιτητής | `r.bitsis` | `r.bitsis@uni.gr` | `diploma` | Ραφαήλ Μπίτσης |
+| Φοιτητής | `p.patseadis` | `p.patseadis@uni.gr` | `diploma` | Πολύβιος Πατσεάδης |
+| Γραμματεία | `grammateia` | `grammateia@uni.gr` | `diploma` | Γραμματεία Τμήματος |
+
+Admin console του Keycloak: <http://localhost:8080> με `admin` / `admin`.
+
+**Από πού να ξεκινήσεις**
+
+| Λογαριασμός | Τι θα δεις |
+|---|---|
+| `g.antoniou` | Ο πιο «γεμάτος» διδάσκων: θέματα, υποψήφιοι, τριμελείς, αξιολογήσεις |
+| `e.papadopoulou` | Φοιτήτρια με ενεργή διπλωματική σε εξέλιξη |
+| `k.pavlou` | Δικαιούχος χωρίς χειροκίνητη παρέμβαση — 0 οφειλόμενα, 240 μονάδες |
+| `g.lekkas` | **Μη** δικαιούχος (3ο έτος, 11 οφειλόμενα, 132 μονάδες) — δείχνει τον αποκλεισμό του BR-1 |
+| `p.patseadis` | Δικαιούχος **χωρίς** ανατεθειμένη διπλωματική — το «άδειο» σενάριο: αναζήτηση θεμάτων και πρώτη δήλωση ενδιαφέροντος |
+| `grammateia` | Εποπτεία όλων, δικαιούχοι, εγκρίσεις, εξαγωγή CSV |
+
+Για εναλλαγή χρήστη: «Αποσύνδεση» από το sidebar και ξανά σύνδεση. Η αποσύνδεση κλείνει και
+τη συνεδρία του Keycloak, οπότε ζητά ξανά κωδικό αντί να σε ξαναβάλει σιωπηλά.
+
+> Οι κωδικοί είναι fixture ανάπτυξης, γραμμένοι μέσα στο realm export. Σε πραγματική
+> εγκατάσταση δεν υπάρχουν τοπικοί χρήστες καθόλου — το Keycloak μπαίνει ως broker προς το
+> SSO του ιδρύματος.
+
+### Πώς δένουν τα δύο συστήματα
+
+```
+Keycloak                          PostgreSQL
+────────                          ──────────
+sub    4a6d4afa-…   ──────────▶   users.keycloak_sub    (γράφεται στην 1η σύνδεση)
+email  g.antoniou@uni.gr  ─────▶  users.email           (ο αρχικός κρίκος)
+realm_access.roles ["professor"]  users.role            (πρέπει να συμφωνούν)
+```
+
+Το Keycloak ξέρει **ποιος** συνδέθηκε· η βάση ξέρει **τι του ανήκει**. Ο κρίκος είναι το
+email, γιατί υπάρχει και στις δύο πλευρές από την πρώτη μέρα· το `keycloak_sub` γράφεται
+στην πρώτη επιτυχημένη σύνδεση και από εκεί και πέρα είναι ο σταθερός σύνδεσμος.
+
+Δύο κανόνες, και οι δύο στο [`lib/auth/identity.ts`](lib/auth/identity.ts):
+
+- **Καμία αυτόματη δημιουργία χρήστη.** Το Keycloak μπορεί να πιστοποιεί όλο το ίδρυμα· εδώ
+  μπαίνει μόνο όποιος έχει γραμμή στο `users`. Το μητρώο το συντηρεί η γραμματεία.
+- **Ο ρόλος του realm πρέπει να συμφωνεί με το `users.role`.** Αν διαφωνούν, η είσοδος
+  απορρίπτεται αντί να «διορθωθεί» σιωπηλά — ένας φοιτητής που πήρε κατά λάθος τον ρόλο
+  `professor` στο Keycloak δεν αποκτά δικαιώματα διδάσκοντα επειδή το ένα σύστημα πρόλαβε
+  το άλλο.
+
+### Πού επιβάλλεται ο έλεγχος
+
+| Σημείο | Τι κάνει |
+|---|---|
+| [`proxy.ts`](proxy.ts) | Φρουρός πριν αποδοθεί σελίδα· χωρίς συνεδρία → οθόνη σύνδεσης, σε ξένη περιοχή → η δική σου αρχική |
+| [`lib/session.ts`](lib/session.ts) | `requireRole()` μέσα σε Server Components **και** Server Actions |
+
+Ο διπλός έλεγχος δεν είναι περιττός: οι Server Actions καλούνται με POST απευθείας στο route
+τους και δεν προστατεύονται από τον φρουρό της σελίδας.
 
 > **Η τριμελής επιτροπή δεν είναι ρόλος.** Ένα μέλος επιτροπής *είναι* διδάσκων· η ιδιότητα
 > προκύπτει ανά διπλωματική από τη σύνθεση της επιτροπής, όχι από τον λογαριασμό. Γι' αυτό οι
@@ -256,7 +326,7 @@ Server Actions (ποιος γράφει στη βάση). Το `signIn` δέχε
 ## Χάρτης σελίδων
 
 ```
-/                                  επιλογή ρόλου
+/                                  σύνδεση μέσω Keycloak
 
 /student
 ├── /topics                        αναζήτηση με φίλτρα
@@ -300,13 +370,18 @@ lib/
 │   ├── seed.ts         γέμισμα της βάσης από το data.ts (idempotent)
 │   └── migrations/     παραγόμενα SQL, σε code review
 ├── actions/            Server Actions — η μοναδική διαδρομή εγγραφής
-├── session.ts          ποιος είναι ο συνδεδεμένος χρήστης (cookie· προσωρινό)
+├── auth/identity.ts    claims του Keycloak → γραμμή του users (email → sub)
+├── session.ts          ποιος είναι ο συνδεδεμένος χρήστης + requireRole()
 ├── data.ts             domain types, σταθερές UI, business logic, seed source
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
 
 Dockerfile              multi-stage: deps → dev → migrate → builder → runner
-docker-compose.yml      PostgreSQL + migrate + η εφαρμογή, πίσω από profile "app"
+auth.config.ts          provider + φρουρός ρόλου — τρέχει και σε edge runtime
+auth.ts                 πλήρης ρύθμιση Auth.js (callbacks με πρόσβαση στη βάση)
+proxy.ts                φρουρός σε επίπεδο αίτησης (πρώην middleware.ts)
+keycloak/               το realm ως κώδικας — import με --import-realm
+docker-compose.yml      PostgreSQL + Keycloak + migrate + η εφαρμογή (profile "app")
 docker-compose.dev.yml  PostgreSQL + εφαρμογή σε container με hot reload (διαδρομή Γ)
 .dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```
@@ -408,8 +483,8 @@ badge να μη χρησιμοποιούν αυθαίρετα χρώματα. Α
 | Database | **PostgreSQL 16.4** + Drizzle ORM | ✅ σχήμα, migrations, seed |
 | Write layer | **Server Actions** ([`lib/actions/`](lib/actions/)) | ✅ υλοποιημένο |
 | Read layer | Server Components → [`lib/db/queries.ts`](lib/db/queries.ts) | ✅ υλοποιημένο |
-| Orchestration | **docker-compose** | ✅ postgres + app |
-| Auth | **Keycloak** (OIDC) — δέχεται ομοσπονδία με SSO ιδρύματος | ⬜ αντικαθιστά το cookie session |
+| Orchestration | **docker-compose** | ✅ postgres + keycloak + app |
+| Auth | **Keycloak** (OIDC) — δέχεται ομοσπονδία με SSO ιδρύματος | ✅ Auth.js v5, realm ως κώδικας |
 | Αποθήκευση αρχείων | **MinIO** (S3-compatible) | ⬜ τα `*_key` πεδία υπάρχουν ήδη στο σχήμα |
 
 Δεν υπάρχει ξεχωριστό backend service: τα Server Components διαβάζουν κατευθείαν από τη βάση
@@ -428,9 +503,10 @@ profile**, ώστε να σηκώνονται με σκέτο `docker compose up
   χειροκίνητη ρύθμιση από admin console
 - **Migrations ως ξεχωριστό ρητό βήμα**, ποτέ αυτόματα στο boot της εφαρμογής
 
-Δύο σημεία περιμένουν το Keycloak, ήδη προετοιμασμένα: το `users.keycloak_sub` (nullable
-μέχρι τότε) και η αναζήτηση χρήστη στο [`lib/session.ts`](lib/session.ts), που σήμερα γίνεται
-με ονοματεπώνυμο αντί για OIDC subject.
+Το Keycloak τρέχει σήμερα ως **αυτόνομος πάροχος ταυτότητας** με δικούς του χρήστες. Σε
+πραγματική εγκατάσταση μπαίνει ως **identity broker** προς το SSO του ιδρύματος: προστίθεται
+Identity Provider (SAML ή OIDC) στο realm και οι τοπικοί χρήστες φεύγουν. Ο κώδικας της
+εφαρμογής δεν αλλάζει — βλέπει το ίδιο OIDC endpoint και το ίδιο `realm_access.roles`.
 
 Το πλήρες σχεσιακό σχήμα, η σειρά υλοποίησης και τα σημεία όπου κάθε business rule
 επιβάλλεται ως constraint βρίσκονται στο [`PROJECT_SPEC.md`](PROJECT_SPEC.md).

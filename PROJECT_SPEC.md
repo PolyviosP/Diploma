@@ -36,7 +36,7 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 | Business rules στο UI | ✅ BR-1…BR-9 |
 | Σχεσιακό μοντέλο & migrations | ⬜ |
 | API layer | ⬜ |
-| Keycloak & authorization | ⬜ |
+| Keycloak & authorization | ✅ OIDC σύνδεση, ρόλοι, φρουρός σε κάθε route |
 | Αποθήκευση αρχείων | ⬜ |
 | docker-compose | ⬜ |
 | CI/CD | ⬜ |
@@ -98,8 +98,8 @@ enum έχει τρεις τιμές και οι σχετικές σελίδες 
 
 | # | Απαίτηση | Κατάσταση |
 |---|---|---|
-| FR-C1 | Σύνδεση αποκλειστικά μέσω SSO Πανεπιστημίου ή Keycloak | ⬜ |
-| FR-C2 | Αυτόματη αναγνώριση ρόλου χρήστη | ⬜ |
+| FR-C1 | Σύνδεση αποκλειστικά μέσω SSO Πανεπιστημίου ή Keycloak | ✅ |
+| FR-C2 | Αυτόματη αναγνώριση ρόλου χρήστη | ✅ realm role → `users.role` |
 | FR-C3 | Dashboard προσαρμοσμένο ανά ρόλο | ✅ |
 | FR-C4 | Κάθε χρήστης βλέπει μόνο τα δεδομένα που τον αφορούν | ⚠️ UI μόνο |
 
@@ -209,7 +209,7 @@ minCredits      = 180   // ECTS
 
 | # | Use case | Actor | UI |
 |---|---|---|---|
-| UC-01 | Σύνδεση μέσω SSO | Όλοι | ⬜ |
+| UC-01 | Σύνδεση μέσω SSO | Όλοι | `/` → Keycloak |
 | UC-02 | Καταχώρηση θέματος | Διδάσκων | `/professor/topics/new` |
 | UC-03 | Αναζήτηση θεμάτων | Φοιτητής | `/student/topics` |
 | UC-04 | Δήλωση ενδιαφέροντος | Φοιτητής | `/student/topics/[id]` |
@@ -407,13 +407,14 @@ CREATE TABLE eligibility_rules (
 ```
 ┌──────────────┐   OIDC    ┌──────────────┐
 │   Browser    │◄─────────►│   Keycloak   │
-└──────┬───────┘           └──────────────┘
-       │ HTTPS
-┌──────▼──────────────────────────────────┐
+└──────┬───────┘           └──────▲───────┘
+       │ HTTPS                    │ code → tokens
+┌──────▼──────────────────────────┴───────┐
 │  Next.js 16 (App Router)                │
+│  ├─ proxy.ts         → φρουρός ρόλου    │
 │  ├─ Server Components → direct queries  │
 │  ├─ Server Actions   → mutations        │
-│  └─ authorization middleware            │
+│  └─ lib/session.ts   → requireRole()    │
 └──────┬───────────────────────┬──────────┘
        │ SQL                   │ S3 API
 ┌──────▼───────┐        ┌──────▼───────┐
@@ -429,7 +430,13 @@ CREATE TABLE eligibility_rules (
 
 ### Authorization
 
-Ο ρόλος έρχεται από το JWT claim του Keycloak. Κάθε route ελέγχει:
+Ο ρόλος έρχεται από το realm role του Keycloak (claim `realm_access.roles`) και
+επιβεβαιώνεται στη σύνδεση απέναντι στο `users.role` — αν τα δύο διαφωνούν, η είσοδος
+απορρίπτεται αντί να «διορθωθεί» σιωπηλά. Ο έλεγχος γίνεται δύο φορές: στο `proxy.ts`
+πριν αποδοθεί η σελίδα, και στο `lib/session.ts` μέσα σε κάθε Server Action — οι
+actions καλούνται με POST απευθείας στο route τους, χωρίς να περάσουν από τη σελίδα.
+
+Κάθε route ελέγχει:
 
 | Ρόλος | Δικαιώματα |
 |---|---|
@@ -443,7 +450,7 @@ CREATE TABLE eligibility_rules (
 
 ```
 app/                          App Router — μία υποδιαδρομή ανά ρόλο
-├── page.tsx                  επιλογή ρόλου / landing
+├── page.tsx                  σύνδεση μέσω Keycloak / landing
 ├── student/{topics,applications,diploma,profile}
 ├── professor/{topics,diplomas,requests}
 │   └── evaluations/          ως μέλος τριμελούς — ίδιος λογαριασμός
@@ -458,7 +465,8 @@ components/
 lib/
 ├── data.ts                   ⚠️ mock — προς αντικατάσταση από db/ + queries
 ├── db/                       ⬜ schema.ts, migrations/, client.ts
-├── auth.ts                   ⬜ Keycloak session, requireRole()
+├── session.ts                ✅ currentUser(), requireRole()
+├── auth/identity.ts          ✅ Keycloak claims → γραμμή του `users`
 ├── storage.ts                ⬜ MinIO presigned URLs
 ├── rules.ts                  ⬜ business rule validation
 └── utils.ts                  cn(), CSV export
@@ -467,7 +475,7 @@ docs/
 ├── diplomatiki.docx          ανάλυση απαιτήσεων & UML
 └── diagrams/                 ⬜ use-case, activity ×2, sequence ×2, class
 
-docker-compose.yml            ⬜ app + postgres + keycloak + minio
+docker-compose.yml            ⚠️ app + postgres + keycloak· λείπει minio
 .github/workflows/            ⬜ ci.yml, deploy.yml
 ```
 
@@ -493,7 +501,7 @@ Tokens στο [`app/globals.css`](app/globals.css) με `@theme inline`.
 
 1. **Σχήμα βάσης** — Drizzle schema, migrations, seed από το `lib/data.ts`
 2. **docker-compose** — postgres + keycloak + minio· η εφαρμογή σηκώνεται με μία εντολή
-3. **Auth** — Keycloak realm, ρόλοι, `requireRole()` σε κάθε route
+3. ~~**Auth** — Keycloak realm, ρόλοι, `requireRole()` σε κάθε route~~ ✅
 4. **Data layer** — αντικατάσταση των imports του `lib/data.ts` με queries
 5. **Mutations** — Server Actions με validation, μία ανά use case
 6. **Constraints & triggers** — BR-1…BR-8 στη βάση

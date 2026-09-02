@@ -863,6 +863,19 @@ export const STUDENTS: StudentRecord[] = [
     // Προστέθηκε χειροκίνητα από τη γραμματεία μετά από απόφαση συνέλευσης.
     manualOverride: true,
   },
+  {
+    // Δικαιούχος χωρίς ανατεθειμένη διπλωματική: το «άδειο» σενάριο — αναζήτηση
+    // θεμάτων και πρώτη δήλωση ενδιαφέροντος ξεκινούν από εδώ.
+    name: 'Πολύβιος Πατσεάδης',
+    am: '3180509',
+    email: 'p.patseadis@uni.gr',
+    year: 5,
+    semester: 9,
+    owedCourses: 1,
+    credits: 231,
+    gpa: 8.5,
+    manualOverride: false,
+  },
 ]
 
 export type EligibilityCheck = {

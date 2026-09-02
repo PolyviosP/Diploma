@@ -1,0 +1,211 @@
+{
+  "realm": "diploma",
+  "displayName": "Diploma — Τμήμα Πληροφορικής",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["el", "en"],
+  "defaultLocale": "el",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 36000,
+
+  "roles": {
+    "realm": [
+      { "name": "student", "description": "Φοιτητής" },
+      { "name": "professor", "description": "Διδάσκων" },
+      { "name": "secretary", "description": "Γραμματεία" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "diploma-app",
+      "name": "Diploma",
+      "description": "Next.js εφαρμογή διαχείρισης διπλωματικών",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "diploma-app-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": ["http://localhost:3000/api/auth/callback/keycloak"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000/*",
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins", "acr"],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "g.antoniou",
+      "email": "g.antoniou@uni.gr",
+      "firstName": "Γεώργιος",
+      "lastName": "Αντωνίου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["professor"]
+    },
+    {
+      "username": "m.konstantinou",
+      "email": "m.konstantinou@uni.gr",
+      "firstName": "Μαρία",
+      "lastName": "Κωνσταντίνου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["professor"]
+    },
+    {
+      "username": "n.dimou",
+      "email": "n.dimou@uni.gr",
+      "firstName": "Νικόλαος",
+      "lastName": "Δήμου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["professor"]
+    },
+    {
+      "username": "e.spanou",
+      "email": "e.spanou@uni.gr",
+      "firstName": "Ελευθερία",
+      "lastName": "Σπανού",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["professor"]
+    },
+    {
+      "username": "p.rigas",
+      "email": "p.rigas@uni.gr",
+      "firstName": "Παύλος",
+      "lastName": "Ρήγας",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["professor"]
+    },
+
+    {
+      "username": "e.papadopoulou",
+      "email": "e.papadopoulou@uni.gr",
+      "firstName": "Ελένη",
+      "lastName": "Παπαδοπούλου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "d.ioannou",
+      "email": "d.ioannou@uni.gr",
+      "firstName": "Δημήτρης",
+      "lastName": "Ιωάννου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "s.makri",
+      "email": "s.makri@uni.gr",
+      "firstName": "Σοφία",
+      "lastName": "Μακρή",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "k.pavlou",
+      "email": "k.pavlou@uni.gr",
+      "firstName": "Κωνσταντίνος",
+      "lastName": "Παύλου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "a.vasileiou",
+      "email": "a.vasileiou@uni.gr",
+      "firstName": "Άννα",
+      "lastName": "Βασιλείου",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "g.lekkas",
+      "email": "g.lekkas@uni.gr",
+      "firstName": "Γιώργος",
+      "lastName": "Λέκκας",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "r.bitsis",
+      "email": "r.bitsis@uni.gr",
+      "firstName": "Ραφαήλ",
+      "lastName": "Μπίτσης",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+
+    {
+      "username": "p.patseadis",
+      "email": "p.patseadis@uni.gr",
+      "firstName": "Πολύβιος",
+      "lastName": "Πατσεάδης",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["student"]
+    },
+
+    {
+      "username": "grammateia",
+      "email": "grammateia@uni.gr",
+      "firstName": "Γραμματεία",
+      "lastName": "Τμήματος",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "diploma", "temporary": false }],
+      "realmRoles": ["secretary"]
+    }
+  ]
+}

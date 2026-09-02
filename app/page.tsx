@@ -1,18 +1,45 @@
 import { GraduationCap } from 'lucide-react'
-import { RolePicker } from '@/components/role-picker'
-import { getProfessors, getStudentRecords } from '@/lib/db/queries'
-import { currentProfessor, currentStudent } from '@/lib/session'
+import { redirect } from 'next/navigation'
 
-/** Οι λίστες έρχονται από τη βάση, οπότε η σελίδα δεν προ-αποδίδεται. */
+import { SignIn } from '@/components/sign-in'
+import { Notice } from '@/components/ui/notice'
+import { currentUser } from '@/lib/session'
+
+/** Η σελίδα εξαρτάται από τη συνεδρία, οπότε δεν προ-αποδίδεται. */
 export const dynamic = 'force-dynamic'
 
-export default async function RoleSelectionPage() {
-  const [students, professors, student, professor] = await Promise.all([
-    getStudentRecords(),
-    getProfessors(),
-    currentStudent(),
-    currentProfessor(),
-  ])
+/**
+ * Τι πήγε στραβά στη ροή OIDC. Το Auth.js επιστρέφει εδώ με `?error=…` επειδή
+ * το `pages.error` δείχνει στην αρχική.
+ */
+const ERRORS: Record<string, { title: string; body: string }> = {
+  AccessDenied: {
+    title: 'Ο λογαριασμός δεν είναι εγγεγραμμένος',
+    body:
+      'Η ταυτοποίηση πέτυχε, αλλά το email δεν αντιστοιχεί σε φοιτητή ή διδάσκοντα του μητρώου — ή ο ρόλος στον πάροχο ταυτότητας διαφέρει από αυτόν του μητρώου. Απευθυνθείτε στη γραμματεία.',
+  },
+  Configuration: {
+    title: 'Σφάλμα ρύθμισης',
+    body:
+      'Η εφαρμογή δεν μπόρεσε να επικοινωνήσει με τον πάροχο ταυτότητας. Ελέγξτε ότι το Keycloak είναι σε λειτουργία και ότι το AUTH_SECRET έχει οριστεί.',
+  },
+  Verification: {
+    title: 'Ο σύνδεσμος έληξε',
+    body: 'Η προσπάθεια σύνδεσης δεν ολοκληρώθηκε εγκαίρως. Δοκιμάστε ξανά.',
+  },
+}
+
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  // Ήδη συνδεδεμένος: πάει κατευθείαν στην περιοχή του ρόλου του.
+  const user = await currentUser()
+  if (user) redirect(`/${user.role}`)
+
+  const { error } = await searchParams
+  const problem = error ? (ERRORS[error] ?? ERRORS.Configuration) : null
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -37,23 +64,20 @@ export default async function RoleSelectionPage() {
             Καλωσορίσατε στην πλατφόρμα διπλωματικών εργασιών
           </h1>
           <p className="mt-3 text-sidebar-foreground/70 text-pretty">
-            Επιλέξτε τον ρόλο σας για να συνεχίσετε. Πρόκειται για διαδραστικό πρωτότυπο με
-            ενδεικτικά δεδομένα.
+            Καταχώρηση θεμάτων, δηλώσεις ενδιαφέροντος, τριμελείς επιτροπές και
+            βαθμολόγηση, σε ένα σημείο.
           </p>
         </div>
 
-        <RolePicker
-          students={students.map((s) => ({
-            name: s.name,
-            detail: `ΑΜ ${s.am} · ${s.year}ο έτος · Μ.Ο. ${s.gpa.toFixed(1)}`,
-          }))}
-          professors={professors.map((p) => ({
-            name: p.name,
-            detail: [p.rank, p.area].filter(Boolean).join(' · '),
-          }))}
-          currentStudent={student}
-          currentProfessor={professor}
-        />
+        {problem ? (
+          <div className="mt-8 max-w-xl">
+            <Notice variant="danger" title={problem.title}>
+              {problem.body}
+            </Notice>
+          </div>
+        ) : null}
+
+        <SignIn />
 
         <footer className="mt-auto pt-10 text-center text-xs text-muted-foreground">
           Τμήμα Πληροφορικής · Ακαδημαϊκό έτος 2024–2025
