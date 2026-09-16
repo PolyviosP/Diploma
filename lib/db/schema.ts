@@ -100,8 +100,11 @@ export const students = pgTable(
     manualOverride: boolean('manual_override').notNull().default(false),
     phone: text('phone'),
     address: text('address'),
-    /** MinIO object key — αναλυτική βαθμολογία. */
+    /** MinIO object key — αναλυτική βαθμολογία. Το αρχείο δεν έχει όνομα εδώ. */
     transcriptKey: text('transcript_key'),
+    /** Το όνομα που έδωσε ο φοιτητής· επιστρέφει μόνο στη λήψη. */
+    transcriptName: text('transcript_name'),
+    transcriptBytes: integer('transcript_bytes'),
     transcriptAt: timestamp('transcript_at', { withTimezone: true }),
   },
   (t) => [check('students_year_range', sql`${t.year} BETWEEN 1 AND 10`)],
@@ -193,8 +196,8 @@ export const diplomas = pgTable(
     status: diplomaStatus('status').notNull().default('in_progress'),
     documentKey: text('document_key'),
     documentName: text('document_name'),
-    /** Μέγεθος προς εμφάνιση (π.χ. '2.4 MB'). Με το MinIO γίνεται bytes. */
-    documentSize: text('document_size'),
+    /** Μέγεθος σε bytes — η μορφοποίηση ('2.4 MB') είναι δουλειά του UI. */
+    documentBytes: integer('document_bytes'),
     /** Υποβολή κειμένου — προϋπόθεση για τη βαθμολόγηση. */
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
     /** Παρουσίαση — προϋπόθεση για τη βαθμολόγηση. */

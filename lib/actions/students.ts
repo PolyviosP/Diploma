@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 
 import { db } from '../db'
-import { diplomas, students, users } from '../db/schema'
+import { students, users } from '../db/schema'
 import { currentStudent } from '../session'
 import { READ_ONLY_ERROR, studentIsLocked } from './lock'
 
@@ -74,71 +74,13 @@ export async function updateProfile(
   return { ok: true }
 }
 
-/** Ανάρτηση αναλυτικής βαθμολογίας — τεκμηρίωση προϋποθέσεων προς τη γραμματεία. */
-export async function uploadTranscript(fileName: string): Promise<ActionResult> {
-  const userId = await currentStudentId()
-  if (!userId) return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
-  if (await studentIsLocked(userId)) return { ok: false, error: READ_ONLY_ERROR }
-
-  if (!fileName.toLowerCase().endsWith('.pdf')) {
-    return { ok: false, error: 'Επιτρέπονται μόνο αρχεία PDF.' }
-  }
-
-  await db
-    .update(students)
-    .set({ transcriptKey: `transcripts/${fileName}`, transcriptAt: new Date() })
-    .where(eq(students.userId, userId))
-
-  revalidatePath('/student/profile')
-  revalidatePath('/secretary/students')
-
-  return { ok: true }
-}
-
-/**
- * Υποβολή τελικού κειμένου. Προϋπόθεση για τη βαθμολόγηση.
+/*
+ * Η ανάρτηση αναλυτικής βαθμολογίας και η υποβολή τελικού κειμένου δεν είναι
+ * actions: τα αρχεία ταξιδεύουν ως multipart σε route handlers
+ * (`app/api/students/[am]/transcript`, `app/api/topics/[id]/document`).
  *
- * Προς το παρόν αποθηκεύεται μόνο το όνομα και το μέγεθος· το πραγματικό αρχείο
- * πάει στο MinIO σε επόμενο βήμα (PROJECT_SPEC §12).
+ * Ο λόγος δεν είναι το μέγεθος αλλά η ασφάλεια. Κάθε export ενός `'use server'`
+ * αρχείου είναι δημόσιο endpoint· μια `submitFinalText(key, …)` θα δεχόταν
+ * object key από τον καλούντα και θα επέτρεπε σε φοιτητή να δείξει τη δική του
+ * εγγραφή στο αρχείο κάποιου άλλου. Τα keys τα φτιάχνει μόνο ο server.
  */
-export async function submitFinalText(
-  fileName: string,
-  fileSize: string,
-): Promise<ActionResult> {
-  const userId = await currentStudentId()
-  if (!userId) return { ok: false, error: 'Ο φοιτητής δεν βρέθηκε.' }
-  if (await studentIsLocked(userId)) return { ok: false, error: READ_ONLY_ERROR }
-
-  if (!fileName.toLowerCase().endsWith('.pdf')) {
-    return { ok: false, error: 'Επιτρέπονται μόνο αρχεία PDF.' }
-  }
-
-  const [diploma] = await db
-    .select({ id: diplomas.id, topicId: diplomas.topicId, status: diplomas.status })
-    .from(diplomas)
-    .where(eq(diplomas.studentId, userId))
-    .limit(1)
-
-  if (!diploma) return { ok: false, error: 'Δεν έχεις ενεργή διπλωματική εργασία.' }
-  if (diploma.status === 'completed') {
-    return { ok: false, error: 'Η διπλωματική έχει ολοκληρωθεί.' }
-  }
-
-  await db
-    .update(diplomas)
-    .set({
-      documentName: fileName,
-      documentSize: fileSize,
-      documentKey: `documents/${fileName}`,
-      submittedAt: new Date(),
-    })
-    .where(eq(diplomas.id, diploma.id))
-
-  revalidatePath('/student/diploma')
-  revalidatePath('/student')
-  revalidatePath('/professor/diplomas')
-  revalidatePath(`/professor/evaluations/${diploma.topicId}`)
-  revalidatePath('/professor/evaluations')
-
-  return { ok: true }
-}

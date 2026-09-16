@@ -187,13 +187,16 @@ export function EligibilityManager({
                 </TableCell>
                 <TableCell>
                   {record.transcript ? (
-                    <span
-                      className="flex items-center gap-1.5 whitespace-nowrap text-xs text-status-completed-foreground"
-                      title={record.transcript.name}
+                    // Ο σύνδεσμος περνά από route handler: εκεί επιβεβαιώνεται ο
+                    // ρόλος πριν υπογραφεί presigned URL προς το MinIO.
+                    <a
+                      href={`/api/students/${encodeURIComponent(record.am)}/transcript`}
+                      className="flex items-center gap-1.5 whitespace-nowrap text-xs text-status-completed-foreground underline-offset-2 hover:underline"
+                      title={`${record.transcript.name} — λήψη`}
                     >
                       <FileCheck2 className="size-3.5" />
                       {formatDate(record.transcript.uploadedAt)}
-                    </span>
+                    </a>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}

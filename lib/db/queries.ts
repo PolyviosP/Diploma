@@ -12,6 +12,8 @@
 
 import { and, asc, desc, eq, ne } from 'drizzle-orm'
 
+import { formatBytes } from '../utils'
+
 import type {
   Annotation,
   Application,
@@ -73,7 +75,7 @@ export async function getAllTopics(): Promise<Topic[]> {
       studentName: users.fullName,
       studentAm: students.am,
       documentName: diplomas.documentName,
-      documentSize: diplomas.documentSize,
+      documentBytes: diplomas.documentBytes,
       submittedAt: diplomas.submittedAt,
       presentedAt: diplomas.presentedAt,
       finalGrade: diplomas.finalGrade,
@@ -152,7 +154,7 @@ export async function getAllTopics(): Promise<Topic[]> {
         diploma?.documentName && diploma.submittedAt
           ? {
               name: diploma.documentName,
-              size: diploma.documentSize ?? '',
+              size: formatBytes(diploma.documentBytes),
               submittedAt: isoDate(diploma.submittedAt),
             }
           : undefined,
@@ -393,6 +395,8 @@ export async function getStudentRecords(): Promise<StudentRecord[]> {
       phone: students.phone,
       address: students.address,
       transcriptKey: students.transcriptKey,
+      transcriptName: students.transcriptName,
+      transcriptBytes: students.transcriptBytes,
       transcriptAt: students.transcriptAt,
     })
     .from(students)
@@ -414,8 +418,10 @@ export async function getStudentRecords(): Promise<StudentRecord[]> {
     transcript:
       r.transcriptKey && r.transcriptAt
         ? {
-            name: r.transcriptKey.split('/').pop()!,
+            // Το key είναι uuid· το όνομα που έδωσε ο φοιτητής ζει σε δική του στήλη.
+            name: r.transcriptName ?? 'Αναλυτική βαθμολογία.pdf',
             uploadedAt: isoDate(r.transcriptAt),
+            size: formatBytes(r.transcriptBytes),
           }
         : undefined,
   }))

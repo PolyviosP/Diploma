@@ -2,30 +2,25 @@
 
 import { useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileText, CheckCircle2, Lock } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, Lock, Download } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatDate } from '@/lib/data'
-import { submitFinalText } from '@/lib/actions/students'
-
-/** Μέγεθος αρχείου σε αναγνώσιμη μορφή, όπως το εμφανίζει το UI. */
-function humanSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+import { MAX_UPLOAD_BYTES, uploadPdf } from '@/lib/utils'
 
 /**
- * Υποβολή τελικού κειμένου. Το αρχείο δεν ανεβαίνει ακόμη πουθενά· στη βάση
- * καταγράφονται όνομα, μέγεθος και ημερομηνία, που είναι ό,τι χρειάζεται για να
- * ξεκλειδώσει η βαθμολόγηση. Το πραγματικό upload πάει στο MinIO
- * (PROJECT_SPEC §12 βήμα 7).
+ * Υποβολή τελικού κειμένου.
+ *
+ * Το αρχείο πάει σε route handler και από εκεί στο MinIO· η σελίδα δεν ξέρει
+ * ούτε bucket ούτε object key — μόνο τον κωδικό του θέματος.
  */
 export function FinalTextUpload({
+  topicId,
   document,
   readOnly = false,
 }: {
+  topicId: string
   document?: { name: string; size: string; submittedAt: string }
   /** Μετά την ολοκλήρωση δεν ανεβαίνει νέα έκδοση — μόνο προβολή. */
   readOnly?: boolean
@@ -37,10 +32,11 @@ export function FinalTextUpload({
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
 
     startTransition(async () => {
-      const result = await submitFinalText(file.name, humanSize(file.size))
+      const result = await uploadPdf(`/api/topics/${topicId}/document`, file)
 
       if (!result.ok) {
         toast({ title: 'Η υποβολή απέτυχε', description: result.error, variant: 'warning' })
@@ -54,8 +50,6 @@ export function FinalTextUpload({
       })
       router.refresh()
     })
-
-    e.target.value = ''
   }
 
   return (
@@ -65,13 +59,13 @@ export function FinalTextUpload({
       </CardHeader>
       <CardContent className="space-y-4">
         {document ? (
-          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <FileText className="size-4" />
               </div>
-              <div>
-                <p className="text-sm font-medium">{document.name}</p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{document.name}</p>
                 <p className="flex items-center gap-1 text-xs text-status-completed-foreground">
                   <CheckCircle2 className="size-3" />
                   Υποβλήθηκε {formatDate(document.submittedAt)}
@@ -79,6 +73,14 @@ export function FinalTextUpload({
                 </p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<a href={`/api/topics/${topicId}/document`} />}
+            >
+              <Download className="size-3.5" />
+              Λήψη
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-4 py-8 text-center">
@@ -113,11 +115,14 @@ export function FinalTextUpload({
             >
               <Upload className="size-4" />
               {pending
-                ? 'Υποβολή...'
+                ? 'Μεταφόρτωση...'
                 : document
                   ? 'Μεταφόρτωση νέας έκδοσης'
                   : 'Μεταφόρτωση αρχείου'}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Μόνο PDF, έως {MAX_UPLOAD_BYTES / 1024 / 1024} MB
+            </p>
           </>
         )}
       </CardContent>

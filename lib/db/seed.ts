@@ -7,7 +7,7 @@
  *   npm run db:seed
  */
 
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import {
   ANNOTATIONS,
@@ -20,7 +20,9 @@ import {
   STUDENTS,
   TOPICS,
 } from '../data'
+import { diplomaDocumentKey, putPdf, transcriptKey } from '../storage'
 import { db } from './index'
+import { placeholderPdf } from './seed-pdf'
 import {
   annotations,
   applications,
@@ -47,6 +49,29 @@ const DEPARTMENT = 'Τμήμα Πληροφορικής'
  * η επαναφορά στα δεδομένα επίδειξης παραμένει ρητή επιλογή.
  */
 const onlyIfEmpty = process.argv.includes('--if-empty')
+
+/**
+ * Τα αρχεία επίδειξης ανεβαίνουν στο MinIO αν υπάρχει MinIO.
+ *
+ * Το seed δεν πέφτει όταν λείπει: η βάση είναι το υποχρεωτικό κομμάτι, τα PDF
+ * είναι η γαρνιτούρα. Η προειδοποίηση είναι ρητή ώστε να μη μοιάζει με επιτυχία
+ * κάτι που έγινε μισό.
+ */
+let storageUp = true
+
+async function uploadDemoPdf(key: string, pdf: Uint8Array): Promise<boolean> {
+  if (!storageUp) return false
+
+  try {
+    await putPdf(key, pdf)
+    return true
+  } catch (error) {
+    storageUp = false
+    console.warn('  ⚠ Το MinIO δεν απαντά — τα αρχεία επίδειξης παραλείπονται.')
+    console.warn(`    ${error instanceof Error ? error.message : String(error)}`)
+    return false
+  }
+}
 
 async function main() {
   if (onlyIfEmpty) {
@@ -127,6 +152,20 @@ async function main() {
 
   const studentIdByName = new Map(studentRows.map((r) => [r.fullName, r.id]))
 
+  // Πρώτα τα αρχεία, μετά οι γραμμές: έτσι καμία γραμμή δεν δείχνει σε object
+  // που δεν ανέβηκε.
+  const transcripts = new Map<string, { key: string; bytes: number }>()
+
+  for (const s of STUDENTS) {
+    if (!s.transcript) continue
+    const userId = studentIdByName.get(s.name)!
+    const pdf = placeholderPdf(`Analytiki vathmologia - AM ${s.am}`)
+    const key = transcriptKey(userId)
+    if (await uploadDemoPdf(key, pdf)) {
+      transcripts.set(s.name, { key, bytes: pdf.byteLength })
+    }
+  }
+
   await db.insert(students).values(
     STUDENTS.map((s) => ({
       userId: studentIdByName.get(s.name)!,
@@ -137,7 +176,9 @@ async function main() {
       credits: s.credits,
       gpa: String(s.gpa),
       manualOverride: s.manualOverride,
-      transcriptKey: s.transcript ? `transcripts/${s.transcript.name}` : null,
+      transcriptKey: transcripts.get(s.name)?.key ?? null,
+      transcriptName: s.transcript?.name ?? null,
+      transcriptBytes: transcripts.get(s.name)?.bytes ?? null,
       transcriptAt: s.transcript ? new Date(s.transcript.uploadedAt) : null,
     })),
   )
@@ -261,8 +302,9 @@ async function main() {
             supervisorId: professorIdByName.get(t.professor)!,
             status: diplomaStatusOf[t.status as keyof typeof diplomaStatusOf],
             documentName: t.document?.name ?? null,
-            documentSize: t.document?.size ?? null,
-            documentKey: t.document ? `documents/${t.document.name}` : null,
+            // Το object key περιέχει το id της διπλωματικής, που το δίνει η
+            // βάση — τα αρχεία ανεβαίνουν αμέσως μετά το insert.
+            documentKey: null,
             submittedAt: t.document ? new Date(t.document.submittedAt) : null,
             presentedAt: t.presentedAt ? new Date(t.presentedAt) : null,
             finalGrade: t.grade != null ? String(t.grade) : null,
@@ -274,6 +316,19 @@ async function main() {
 
   /** topicId → diplomaId, για βαθμούς/παρατηρήσεις/αιτήματα. */
   const diplomaIdByTopic = new Map(diplomaRows.map((d) => [d.topicId, d.id]))
+
+  for (const t of assigned) {
+    if (!t.document) continue
+    const diplomaId = diplomaIdByTopic.get(t.id)!
+    const pdf = placeholderPdf(`Diplomatiki ergasia - ${t.id}`)
+    const key = diplomaDocumentKey(diplomaId)
+    if (!(await uploadDemoPdf(key, pdf))) continue
+
+    await db
+      .update(diplomas)
+      .set({ documentKey: key, documentBytes: pdf.byteLength })
+      .where(eq(diplomas.id, diplomaId))
+  }
 
   // 3 μέλη, ο επιβλέπων με ρόλο supervisor.
   const members = assigned.flatMap((t) =>

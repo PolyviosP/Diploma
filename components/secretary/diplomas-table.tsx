@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Search, SlidersHorizontal, Download, FileSearch } from 'lucide-react'
+import { Search, SlidersHorizontal, Download, FileSearch, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -201,6 +201,7 @@ export function DiplomasTable({
               <TableHeaderCell>Τίτλος</TableHeaderCell>
               <TableHeaderCell>Φοιτητής</TableHeaderCell>
               <TableHeaderCell>Επιβλέπων</TableHeaderCell>
+              <TableHeaderCell>Κείμενο</TableHeaderCell>
               <TableHeaderCell>Βαθμοί</TableHeaderCell>
               <TableHeaderCell>Τελικός</TableHeaderCell>
               <TableHeaderCell>Κατάσταση</TableHeaderCell>
@@ -224,6 +225,22 @@ export function DiplomasTable({
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {topic.professor}
+                  </TableCell>
+                  <TableCell>
+                    {topic.document ? (
+                      // Ο έλεγχος ρόλου γίνεται στο route handler· η γραμματεία
+                      // έχει read σε όλα (PROJECT_SPEC §9).
+                      <a
+                        href={`/api/topics/${topic.id}/document`}
+                        className="flex items-center gap-1.5 whitespace-nowrap text-xs text-primary underline-offset-2 hover:underline"
+                        title={topic.document.name}
+                      >
+                        <FileText className="size-3.5" />
+                        Λήψη
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {gradesOf(allGrades, topic.id).length}/3
