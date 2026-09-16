@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Bell,
   GraduationCap,
   Menu,
   X,
@@ -16,7 +15,7 @@ import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from '@/components/shell/nav-config'
 import { LiveData } from '@/components/shell/live-data'
 import { GlobalSearch } from '@/components/shell/global-search'
-import { ROLE_META, NOTIFICATIONS, type Role } from '@/lib/data'
+import { ROLE_META, type Role } from '@/lib/data'
 import { Avatar } from '@/components/ui/avatar'
 
 export function DashboardShell({
@@ -33,39 +32,32 @@ export function DashboardShell({
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const notifRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Τα dropdown του header κλείνουν με κλικ οπουδήποτε αλλού ή με Escape. Ο
-  // listener στο document μπαίνει μόνο όσο κάτι είναι ανοιχτό, ώστε να μη
-  // «γράφει» η σελίδα σε κάθε κλικ χωρίς λόγο.
+  // Το dropdown του header κλείνει με κλικ οπουδήποτε αλλού ή με Escape. Ο
+  // listener στο document μπαίνει μόνο όσο είναι ανοιχτό, ώστε να μη «γράφει»
+  // η σελίδα σε κάθε κλικ χωρίς λόγο.
   //
   // `pointerdown` και όχι `click`: κλείνει με το πάτημα, και δεν χάνεται το
   // γεγονός όταν το στοιχείο κάτω από τον δείκτη προλάβει να αφαιρεθεί.
   useEffect(() => {
-    if (!notifOpen && !profileOpen) return
+    if (!profileOpen) return
 
-    const closeAll = () => {
-      setNotifOpen(false)
-      setProfileOpen(false)
-    }
+    const close = () => setProfileOpen(false)
 
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null
       if (!target) return
       // Κλικ μέσα στο ίδιο το dropdown ή στο κουμπί του — δεν το κλείνει· το
       // toggle του κουμπιού κάνει ήδη τη δουλειά.
-      if (notifRef.current?.contains(target) || profileRef.current?.contains(target)) {
-        return
-      }
-      closeAll()
+      if (profileRef.current?.contains(target)) return
+      close()
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeAll()
+      if (event.key === 'Escape') close()
     }
 
     document.addEventListener('pointerdown', onPointerDown)
@@ -75,11 +67,10 @@ export function DashboardShell({
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [notifOpen, profileOpen])
+  }, [profileOpen])
 
   const nav = NAV_CONFIG[role]
   const meta = ROLE_META[role]
-  const unread = NOTIFICATIONS.filter((n) => n.unread).length
 
   // Ενεργό θεωρείται το πιο εξειδικευμένο link που ταιριάζει, ώστε το
   // /professor/topics/new να μην φωτίζει και το /professor/topics.
@@ -202,67 +193,11 @@ export function DashboardShell({
               <Search className="size-5" />
             </button>
 
-            {/* Notifications */}
-            <div className="relative" ref={notifRef}>
-              <button
-                type="button"
-                onClick={() => {
-                  setNotifOpen((v) => !v)
-                  setProfileOpen(false)
-                }}
-                className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted"
-                aria-label="Ειδοποιήσεις"
-              >
-                <Bell className="size-5" />
-                {unread > 0 ? (
-                  <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[0.6rem] font-bold text-primary-foreground">
-                    {unread}
-                  </span>
-                ) : null}
-              </button>
-              {notifOpen ? (
-                <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-popover shadow-lg animate-in fade-in slide-in-from-top-1">
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                    <p className="text-sm font-semibold">Ειδοποιήσεις</p>
-                    <span className="text-xs text-muted-foreground">{unread} νέες</span>
-                  </div>
-                  <ul className="max-h-80 divide-y divide-border overflow-y-auto">
-                    {NOTIFICATIONS.map((n) => (
-                      <li
-                        key={n.id}
-                        className={cn('px-4 py-3', n.unread && 'bg-primary/5')}
-                      >
-                        <div className="flex items-start gap-2">
-                          {n.unread ? (
-                            <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-                          ) : (
-                            <span className="mt-1.5 size-2 shrink-0 rounded-full bg-transparent" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-popover-foreground">
-                              {n.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{n.body}</p>
-                            <p className="mt-0.5 text-[0.7rem] text-muted-foreground/70">
-                              {n.time}
-                            </p>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-
             {/* Profile */}
             <div className="relative" ref={profileRef}>
               <button
                 type="button"
-                onClick={() => {
-                  setProfileOpen((v) => !v)
-                  setNotifOpen(false)
-                }}
+                onClick={() => setProfileOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-lg p-1 pl-1 pr-2 transition-colors hover:bg-muted"
               >
                 <Avatar name={person} />
