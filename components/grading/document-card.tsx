@@ -3,7 +3,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDate, type Topic } from '@/lib/data'
 
-/** Προβολή του υποβληθέντος τελικού κειμένου. */
+/**
+ * Προβολή του υποβληθέντος τελικού κειμένου.
+ *
+ * Ο σύνδεσμος λήψης δείχνει στο route handler, όχι στο MinIO: εκεί ελέγχεται αν
+ * ο συνδεδεμένος είναι μέλος της τριμελούς και μόνο τότε υπογράφεται presigned
+ * URL 60 δευτερολέπτων (PROJECT_SPEC §9).
+ */
 export function DocumentCard({ topic }: { topic: Topic }) {
   return (
     <Card>
@@ -26,7 +32,11 @@ export function DocumentCard({ topic }: { topic: Topic }) {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              render={<a href={`/api/topics/${topic.id}/document`} />}
+            >
               <Download className="size-3.5" />
               Λήψη PDF
             </Button>

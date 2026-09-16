@@ -95,7 +95,11 @@ export default async function StudentDiplomaPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <FinalTextUpload document={diploma.document} readOnly={readOnly} />
+        <FinalTextUpload
+          topicId={diploma.id}
+          document={diploma.document}
+          readOnly={readOnly}
+        />
 
         <Card>
           <CardHeader>

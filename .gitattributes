@@ -1,0 +1,3 @@
+# Τα shell scripts μπαίνουν σε Linux containers: πάντα LF, ακόμη και σε Windows
+# checkout — ένα CRLF στο shebang δίνει "no such file or directory".
+*.sh text eol=lf

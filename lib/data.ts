@@ -778,7 +778,7 @@ export type StudentRecord = {
   manualOverride: boolean
   phone?: string
   address?: string
-  transcript?: { name: string; uploadedAt: string }
+  transcript?: { name: string; uploadedAt: string; size?: string }
 }
 
 export const STUDENTS: StudentRecord[] = [

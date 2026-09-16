@@ -60,6 +60,54 @@ services:
       retries: 20
       start_period: 30s
 
+  # Αποθήκευση αρχείων με S3 API. Δύο θύρες, δύο διαφορετικά πράγματα: η 9000
+  # είναι το ίδιο το API — εκεί δείχνουν τα presigned URL που παίρνει ο browser —
+  # και η 9001 το console, χρήσιμο μόνο για επιθεώρηση κατά την ανάπτυξη.
+  #
+  # Καρφωμένο στο RELEASE.2025-04-22 και όχι σε νεότερο: από τον Μάιο του 2025 το
+  # community image κυκλοφορεί με ακρωτηριασμένο console (χωρίς object browser).
+  # Ο server είναι ίδιος· η παλαιότερη έκδοση κρατά το console χρησιμοποιήσιμο
+  # για την επίδειξη.
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: diploma-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      # Root credentials: τα βλέπει μόνο το minio-init, ποτέ η εφαρμογή.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # One-shot: bucket, χρήστης εφαρμογής και policy ελάχιστων δικαιωμάτων.
+  # Το MinIO ως κώδικας, όπως το realm του Keycloak — δες minio/init.sh.
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-07-21T05-28-08Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-diploma}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-diploma-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-diploma-app-secret}
+    entrypoint: ["/bin/bash", "/init/init.sh"]
+    volumes:
+      - ./minio:/init:ro
+
   # One-shot: τρέχει, κάνει τη δουλειά του, τερματίζει. Χωρίς αυτό η εφαρμογή σε
   # καθαρό μηχάνημα βρίσκει άδεια βάση και κάθε σελίδα σκάει με «relation does
   # not exist» — τα migrations έτρεχαν μέχρι τώρα μόνο χειροκίνητα από τον host.
@@ -71,6 +119,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Το seed ανεβάζει και τα PDF επίδειξης· χωρίς bucket δεν έχει πού.
+      minio-init:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile
@@ -81,6 +132,10 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: postgresql://diploma:diploma@postgres:5432/diploma
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-diploma}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-diploma-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-diploma-app-secret}
 
   app:
     profiles: ["app"]
@@ -93,6 +148,8 @@ services:
       # Η εφαρμογή ξεκινά μόνο αφού το σχήμα υπάρχει. Αν το migrate αποτύχει,
       # το compose δεν σηκώνει καθόλου την εφαρμογή αντί να τη δείξει σπασμένη.
       migrate:
+        condition: service_completed_successfully
+      minio-init:
         condition: service_completed_successfully
     build:
       context: .
@@ -116,6 +173,14 @@ services:
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/diploma
       # Εσωτερικό: από εδώ ζητά ο server tokens και κλειδιά, χωρίς να βγει έξω.
       KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/diploma
+      # Ίδιος διαχωρισμός και για το MinIO: ο server ανεβάζει μέσα στο δίκτυο του
+      # compose, αλλά το presigned URL πρέπει να υπογραφεί για το hostname που θα
+      # δει ο browser — η υπογραφή SigV4 καλύπτει και τον `Host`.
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_BUCKET: ${S3_BUCKET:-diploma}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-diploma-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-diploma-app-secret}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -126,6 +191,4 @@ services:
 volumes:
   postgres-data:
   keycloak-data:
-
-# Επόμενο βήμα (PROJECT_SPEC.md §12): minio, χωρίς profile, με healthcheck και
-# named volume.
+  minio-data:

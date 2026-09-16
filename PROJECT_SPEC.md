@@ -37,8 +37,8 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 | Σχεσιακό μοντέλο & migrations | ⬜ |
 | API layer | ⬜ |
 | Keycloak & authorization | ✅ OIDC σύνδεση, ρόλοι, φρουρός σε κάθε route |
-| Αποθήκευση αρχείων | ⬜ |
-| docker-compose | ⬜ |
+| Αποθήκευση αρχείων | ✅ MinIO, upload με επαλήθευση, λήψη με presigned URL |
+| docker-compose | ✅ postgres + keycloak + minio + migrate + app |
 | CI/CD | ⬜ |
 | Διαγράμματα PlantUML στο repo | ⬜ |
 
@@ -265,7 +265,9 @@ CREATE TABLE students (
   manual_override   boolean NOT NULL DEFAULT false,   -- προσθήκη από γραμματεία
   phone             text,
   address           text,
-  transcript_key    text,                             -- MinIO object key
+  transcript_key    text,                             -- MinIO object key (uuid)
+  transcript_name   text,                             -- όνομα που έδωσε ο φοιτητής
+  transcript_bytes  integer,
   transcript_at     timestamptz
 );
 
@@ -320,8 +322,9 @@ CREATE TABLE diplomas (
   student_id     uuid NOT NULL REFERENCES students(user_id),
   supervisor_id  uuid NOT NULL REFERENCES professors(user_id),
   status         diploma_status NOT NULL DEFAULT 'IN_PROGRESS',
-  document_key   text,
-  document_name  text,
+  document_key   text,                                          -- MinIO object key (uuid)
+  document_name  text,                                          -- όνομα που έδωσε ο φοιτητής
+  document_bytes integer,
   submitted_at   timestamptz,                                  -- υποβολή κειμένου
   presented_at   timestamptz,                                  -- παρουσίαση (BR-6)
   final_grade    numeric(3,1),
@@ -467,7 +470,7 @@ lib/
 ├── db/                       ⬜ schema.ts, migrations/, client.ts
 ├── session.ts                ✅ currentUser(), requireRole()
 ├── auth/identity.ts          ✅ Keycloak claims → γραμμή του `users`
-├── storage.ts                ⬜ MinIO presigned URLs
+├── storage.ts                ✅ MinIO: object keys, presigned URLs, έλεγχος PDF
 ├── rules.ts                  ⬜ business rule validation
 └── utils.ts                  cn(), CSV export
 
@@ -475,7 +478,8 @@ docs/
 ├── diplomatiki.docx          ανάλυση απαιτήσεων & UML
 └── diagrams/                 ⬜ use-case, activity ×2, sequence ×2, class
 
-docker-compose.yml            ⚠️ app + postgres + keycloak· λείπει minio
+minio/                        ✅ bucket + χρήστης εφαρμογής + policy ως κώδικας
+docker-compose.yml            ✅ app + postgres + keycloak + minio
 .github/workflows/            ⬜ ci.yml, deploy.yml
 ```
 
@@ -500,12 +504,12 @@ Tokens στο [`app/globals.css`](app/globals.css) με `@theme inline`.
 ## 12. Σειρά υλοποίησης
 
 1. **Σχήμα βάσης** — Drizzle schema, migrations, seed από το `lib/data.ts`
-2. **docker-compose** — postgres + keycloak + minio· η εφαρμογή σηκώνεται με μία εντολή
+2. ~~**docker-compose** — postgres + keycloak + minio· η εφαρμογή σηκώνεται με μία εντολή~~ ✅
 3. ~~**Auth** — Keycloak realm, ρόλοι, `requireRole()` σε κάθε route~~ ✅
 4. **Data layer** — αντικατάσταση των imports του `lib/data.ts` με queries
 5. **Mutations** — Server Actions με validation, μία ανά use case
 6. **Constraints & triggers** — BR-1…BR-8 στη βάση
-7. **Αποθήκευση αρχείων** — MinIO, presigned URLs, όριο 20 MB, μόνο PDF
+7. ~~**Αποθήκευση αρχείων** — MinIO, presigned URLs, όριο 20 MB, μόνο PDF~~ ✅
 8. **Tests** — unit στα business rules, integration στις ροές UC-04/07/10/11
 9. **CI/CD** — GitHub Actions: typecheck → test → build → deploy
 10. **Διαγράμματα PlantUML** — εξαγωγή από το docx στο `docs/diagrams/`
@@ -532,6 +536,7 @@ Tokens στο [`app/globals.css`](app/globals.css) με `@theme inline`.
 | `npm run lint` | Το script καλεί `eslint` αλλά το ESLint δεν είναι εγκατεστημένο και δεν υπάρχει config |
 | `tsconfig.tsbuildinfo` | Build artifact που δεν είναι στο `.gitignore` |
 | Business rules | Επιβάλλονται μόνο client-side |
-| Uploads | Τα PDF και η αναλυτική βαθμολογία είναι εικονικά |
+| Έλεγχος περιεχομένου | Δεν γίνεται antivirus scan (ClamAV) στα ανεβασμένα PDF |
+| Rate limiting | Τα endpoints μεταφόρτωσης δεν έχουν όριο συχνότητας |
 | Ειδοποιήσεις | Στατικές· χωρίς μηχανισμό παραγωγής |
 | Ειδοποίηση μελών | Ο ορισμός τριμελούς δεν στέλνει ειδοποίηση· η διπλωματική απλώς εμφανίζεται στη λίστα τους |

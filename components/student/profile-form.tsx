@@ -2,21 +2,21 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Upload, FileCheck2, CheckCircle2, XCircle, Lock } from 'lucide-react'
+import { Save, Upload, FileCheck2, CheckCircle2, XCircle, Lock, Download } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Input, Label } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
-import { cn } from '@/lib/utils'
+import { cn, MAX_UPLOAD_BYTES, uploadPdf } from '@/lib/utils'
 import {
   checkEligibility,
   formatDate,
   type EligibilityRules,
   type StudentRecord,
 } from '@/lib/data'
-import { updateProfile, uploadTranscript as uploadTranscriptAction } from '@/lib/actions/students'
+import { updateProfile } from '@/lib/actions/students'
 
 export function ProfileForm({
   record,
@@ -70,12 +70,17 @@ export function ProfileForm({
     })
   }
 
+  // Το αρχείο ανεβαίνει στο route handler του φοιτητή· ο ΑΜ είναι η διεύθυνση,
+  // το object key το ορίζει ο server (lib/storage.ts).
+  const transcriptUrl = record ? `/api/students/${encodeURIComponent(record.am)}/transcript` : ''
+
   const uploadTranscript = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    e.target.value = ''
+    if (!file || !transcriptUrl) return
 
     startTransition(async () => {
-      const result = await uploadTranscriptAction(file.name)
+      const result = await uploadPdf(transcriptUrl, file)
 
       if (!result.ok) {
         toast({ title: 'Η ανάρτηση απέτυχε', description: result.error, variant: 'warning' })
@@ -229,9 +234,14 @@ export function ProfileForm({
                     <p className="truncate text-sm font-medium">{transcript.name}</p>
                     <p className="text-xs text-muted-foreground">
                       Αναρτήθηκε {formatDate(transcript.uploadedAt)}
+                      {transcript.size ? ` · ${transcript.size}` : ''}
                     </p>
                   </div>
                 </div>
+                <Button variant="outline" size="sm" render={<a href={transcriptUrl} />}>
+                  <Download className="size-3.5" />
+                  Λήψη
+                </Button>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-4 py-8 text-center">
@@ -253,14 +263,24 @@ export function ProfileForm({
                 )}
               >
                 <Upload className="size-4" />
-                {transcript ? 'Ανάρτηση νέας έκδοσης' : 'Ανάρτηση αρχείου PDF'}
+                {pending
+                  ? 'Μεταφόρτωση...'
+                  : transcript
+                    ? 'Ανάρτηση νέας έκδοσης'
+                    : 'Ανάρτηση αρχείου PDF'}
                 <input
                   type="file"
                   accept="application/pdf"
                   className="sr-only"
+                  disabled={pending}
                   onChange={uploadTranscript}
                 />
               </label>
+            )}
+            {readOnly ? null : (
+              <p className="text-center text-xs text-muted-foreground">
+                Μόνο PDF, έως {MAX_UPLOAD_BYTES / 1024 / 1024} MB
+              </p>
             )}
           </CardContent>
         </Card>

@@ -76,3 +76,34 @@ export async function resolveIdentity(claims: KeycloakClaims): Promise<Identity 
 
   return { userId: row.id, fullName: row.fullName, email: row.email, role }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Ξεπερασμένη συνεδρία                                                       */
+/* -------------------------------------------------------------------------- */
+
+export const STALE_SESSION_ERROR =
+  'Η συνεδρία σου δείχνει σε λογαριασμό που δεν υπάρχει πλέον στο μητρώο. ' +
+  'Αποσυνδέσου και συνδέσου ξανά.'
+
+/**
+ * Γιατί χρειάζεται: το `users.id` ταξιδεύει μέσα στο cookie και ζει ως μία ώρα
+ * (`session.maxAge`). Ένα `npm run db:seed` στο μεταξύ ξαναφτιάχνει το μητρώο με
+ * νέα uuid, οπότε το cookie δείχνει σε γραμμή που δεν υπάρχει. Χωρίς αυτόν τον
+ * έλεγχο κάθε έλεγχος ιδιοκτησίας αποτυγχάνει με «δεν σου ανήκει» — μήνυμα που
+ * ενοχοποιεί τον χρήστη για πρόβλημα της συνεδρίας και στέλνει όποιον το δει να
+ * ψάχνει λάθος πράγμα.
+ *
+ * Επιστρέφει δεδομένα και όχι `Response`: το module δεν ξέρει από HTTP.
+ */
+export async function ownershipDenial(
+  userId: string,
+  message: string,
+): Promise<{ error: string; status: number }> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  return row ? { error: message, status: 403 } : { error: STALE_SESSION_ERROR, status: 401 }
+}

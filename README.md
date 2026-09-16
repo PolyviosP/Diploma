@@ -25,7 +25,7 @@ Web εφαρμογή για τη διαχείριση του κύκλου ζωή
 - [x] **Αυθεντικοποίηση με Keycloak** — OIDC Authorization Code + PKCE, ρόλοι από το realm
 - [x] Εξαγωγή αποτελεσμάτων σε CSV
 - [x] Containerization — τρέχει με μία εντολή, χωρίς εγκατεστημένο Node
-- [ ] Πραγματικό upload αρχείων (MinIO) — σήμερα αποθηκεύεται μόνο το όνομα αρχείου
+- [x] **Αποθήκευση αρχείων σε MinIO** — upload με έλεγχο περιεχομένου, λήψη με presigned URL
 
 ---
 
@@ -73,9 +73,14 @@ npm run down    # τερματισμός
 Μία εντολή, τρία βήματα με τη σειρά:
 
 ```
-postgres  ──healthy──▶  migrate  ──exit 0──▶  app
-(βάση)                  (σχήμα + δεδομένα)    (localhost:3000)
+postgres ─healthy─┐
+                  ├─▶  migrate  ──exit 0──▶  app
+minio ─healthy─▶ minio-init ─exit 0─┘        (localhost:3000)
+                  (bucket + policy)
 ```
+
+Τα backing services σηκώνονται παράλληλα· το `migrate` περιμένει και τα δύο επειδή γράφει
+και στη βάση και στο bucket (τα PDF επίδειξης).
 
 Το `migrate` είναι **one-shot container**: τρέχει `drizzle-kit migrate`, μετά το seed, και
 τερματίζει. Το `app` ξεκινά μόνο με `service_completed_successfully` — αν το σχήμα αποτύχει
@@ -83,6 +88,11 @@ postgres  ──healthy──▶  migrate  ──exit 0──▶  app
 
 Το πρώτο build παίρνει μερικά λεπτά· τα επόμενα είναι cached. Τερματισμός με `Ctrl+C`
 ή `docker compose down`.
+
+> **Μετά από `npm run db:seed` χρειάζεται νέα σύνδεση.** Το seed κάνει `TRUNCATE` και
+> ξαναφτιάχνει τους χρήστες με νέα uuid, ενώ το `users.id` ζει μέσα στο cookie της
+> συνεδρίας για μία ώρα. Χωρίς `/logout` οι έλεγχοι ιδιοκτησίας απαντούν 401 με
+> «η συνεδρία σου δείχνει σε λογαριασμό που δεν υπάρχει πλέον».
 
 > Το seed τρέχει με `--if-empty`: γεμίζει **μόνο άδεια βάση**. Σε επόμενα
 > `docker compose up` ό,τι έχεις καταχωρίσει από την εφαρμογή παραμένει — το `TRUNCATE`
@@ -96,9 +106,9 @@ Package manager: **npm** — το `package-lock.json` είναι το μοναδ
 
 ```bash
 npm install
-npm run db:migrate         # δημιουργία σχήματος
-npm run db:seed            # δεδομένα επίδειξης
-npm run dev                # σηκώνει PostgreSQL + Keycloak + εφαρμογή
+npm run dev                # σηκώνει PostgreSQL + Keycloak + MinIO, μετά την εφαρμογή
+npm run db:migrate         # δημιουργία σχήματος   (σε άλλο τερματικό, την πρώτη φορά)
+npm run db:seed            # δεδομένα επίδειξης    (χρειάζεται το MinIO για τα PDF)
 ```
 
 Άνοιξε το [http://localhost:3000](http://localhost:3000).
@@ -110,8 +120,9 @@ npm run dev                # σηκώνει PostgreSQL + Keycloak + εφαρμο
 Keycloak, κλειδιά του MinIO — φτιάχνεις `.env.local`, που μένει εκτός git και έχει
 προτεραιότητα έναντι του `.env`.
 
-Το `npm run dev` σηκώνει **πρώτα PostgreSQL και Keycloak**
-(`docker compose up -d --wait postgres keycloak`) και περιμένει να περάσουν τα healthchecks
+Το `npm run dev` σηκώνει **πρώτα PostgreSQL, Keycloak και MinIO**
+(`docker compose up -d --wait postgres keycloak minio`), τρέχει το `minio-init` που στήνει
+bucket και δικαιώματα, και περιμένει να περάσουν τα healthchecks
 πριν ξεκινήσει το `next dev` — δεν χρειάζεται ξεχωριστό βήμα, ούτε να θυμάσαι ποιο container
 λείπει. Το Keycloak θέλει ~20 δευτερόλεπτα την πρώτη φορά, όσο εισάγει το realm.
 
@@ -197,6 +208,7 @@ docker compose -f docker-compose.dev.yml up --build
 | `npm run dev` | PostgreSQL (container) + development server (native) με hot reload (διαδρομή Β) |
 | `npm run dev:docker` | Εφαρμογή σε container με hot reload (διαδρομή Γ) |
 | `npm run db:up` | Μόνο η PostgreSQL, χωρίς την εφαρμογή |
+| `docker compose run --rm minio-init` | Ξαναστήνει bucket, χρήστη και policy στο MinIO (idempotent) |
 | `npm run build` | Production build |
 | `npm start` | Εκτέλεση του production build |
 | `npx tsc --noEmit` | Έλεγχος τύπων |
@@ -358,6 +370,7 @@ email, γιατί υπάρχει και στις δύο πλευρές από τ
 
 ```
 app/                    App Router — μία υποδιαδρομή ανά ρόλο
+└── api/                route handlers: OIDC callback + μεταφόρτωση/λήψη αρχείων
 components/
 ├── ui/                 primitives (Button, Card, Select, Dialog, Table, …)
 ├── shell/              DashboardShell, πλοήγηση, LiveData (auto-refresh)
@@ -368,10 +381,12 @@ lib/
 │   ├── schema.ts       ορισμός πινάκων (Drizzle) — η μοναδική πηγή αλήθειας
 │   ├── queries.ts      read layer· ό,τι διαβάζουν τα Server Components
 │   ├── seed.ts         γέμισμα της βάσης από το data.ts (idempotent)
+│   ├── seed-pdf.ts     PDF επίδειξης, ώστε κάθε «Λήψη» να κατεβάζει όντως αρχείο
 │   └── migrations/     παραγόμενα SQL, σε code review
 ├── actions/            Server Actions — η μοναδική διαδρομή εγγραφής
 ├── auth/identity.ts    claims του Keycloak → γραμμή του users (email → sub)
 ├── session.ts          ποιος είναι ο συνδεδεμένος χρήστης + requireRole()
+├── storage.ts          MinIO μέσω S3 API: object keys, presigned URLs, έλεγχος PDF
 ├── data.ts             domain types, σταθερές UI, business logic, seed source
 └── utils.ts            cn() + εξαγωγή CSV
 docs/                   ανάλυση απαιτήσεων & UML
@@ -381,8 +396,9 @@ auth.config.ts          provider + φρουρός ρόλου — τρέχει κ
 auth.ts                 πλήρης ρύθμιση Auth.js (callbacks με πρόσβαση στη βάση)
 proxy.ts                φρουρός σε επίπεδο αίτησης (πρώην middleware.ts)
 keycloak/               το realm ως κώδικας — import με --import-realm
-docker-compose.yml      PostgreSQL + Keycloak + migrate + η εφαρμογή (profile "app")
-docker-compose.dev.yml  PostgreSQL + εφαρμογή σε container με hot reload (διαδρομή Γ)
+minio/                  bucket, χρήστης εφαρμογής και policy ως κώδικας
+docker-compose.yml      PostgreSQL + Keycloak + MinIO + migrate + εφαρμογή (profile "app")
+docker-compose.dev.yml  backing services + εφαρμογή σε container με hot reload (διαδρομή Γ)
 .dockerignore           κρατάει node_modules/.next/.git εκτός build context
 ```
 
@@ -473,6 +489,86 @@ badge να μη χρησιμοποιούν αυθαίρετα χρώματα. Α
 
 ---
 
+## Αποθήκευση αρχείων
+
+Δύο είδη αρχείων, και τα δύο PDF: η **αναλυτική βαθμολογία** που ανεβάζει ο φοιτητής για να
+τεκμηριώσει τις προϋποθέσεις ανάληψης, και το **τελικό κείμενο** της διπλωματικής που
+διαβάζει η τριμελής επιτροπή. Ζουν σε [MinIO](https://min.io) — S3-compatible object storage
+που τρέχει σε container, χωρίς εξάρτηση από εμπορική υπηρεσία.
+
+### Η διαδρομή ενός αρχείου
+
+```
+ΑΝΕΒΑΣΜΑ                                  ΛΗΨΗ
+browser                                   browser
+   │ multipart POST                          │ GET /api/topics/THE-2401/document
+   ▼                                         ▼
+route handler                             route handler
+   │ ελέγχει: ρόλος, ιδιοκτησία,             │ ελέγχει: ρόλος, ιδιοκτησία
+   │ %PDF-, ≤ 20 MB                          │ υπογράφει presigned URL 60"
+   ▼ PutObject                               │ 307 redirect
+ MinIO  ◀── key: diplomas/{id}/{uuid}.pdf    └──────────▶ MinIO (κατευθείαν)
+   │
+   ▼ commit στη βάση, μετά διαγραφή παλιάς έκδοσης
+```
+
+**Το ανέβασμα περνά από την εφαρμογή, η λήψη όχι.** Δεν είναι ασυνέπεια αλλά η λογική
+συνέπεια του τι μπορεί να επαληθευτεί πού: μόνο ο server μπορεί να δει ότι τα bytes
+ξεκινούν με `%PDF-` και ότι είναι όντως τόσα όσα δηλώθηκαν. Ένα presigned PUT κατευθείαν
+από τον browser θα εμπιστευόταν τον client και θα άφηνε ορφανά objects όποτε το δεύτερο
+βήμα δεν ερχόταν ποτέ. Στη λήψη δεν υπάρχει τίποτα να επαληθευτεί μετά τον έλεγχο ρόλου,
+οπότε τα MB πάνε κατευθείαν από το MinIO στον browser χωρίς να περάσουν από το Next.
+
+### Τι δεν γίνεται ποτέ
+
+| Κανόνας | Γιατί |
+|---|---|
+| **Ο client δεν ονομάζει object.** Οι διαδρομές είναι `/api/topics/{id}/document` και `/api/students/{am}/transcript` | Το key το βρίσκει ο server στη βάση, αφού ελέγξει ποιος ρωτά. Δεν υπάρχει αίτηση που να μπορεί να ζητήσει αυθαίρετο αρχείο |
+| **Το όνομα του χρήστη δεν γίνεται key.** Key = `diplomas/{id}/{uuid}.pdf` | Ούτε path traversal, ούτε συγκρούσεις, ούτε προβλήματα κωδικοποίησης. Το πραγματικό όνομα ζει σε στήλη και επιστρέφει ως `Content-Disposition` (RFC 5987, ώστε τα ελληνικά να φτάνουν ακέραια) |
+| **Δεν υπάρχει server action που δέχεται key** | Κάθε export ενός `'use server'` αρχείου είναι δημόσιο endpoint· μια `submitFinalText(key, …)` θα επέτρεπε σε φοιτητή να δείξει τη δική του εγγραφή στο αρχείο άλλου |
+| **Το bucket δεν διαβάζεται ανώνυμα** (`mc anonymous set none`) | Ανώνυμο GET απαντά 403· η μόνη είσοδος είναι presigned URL 60 δευτερολέπτων |
+| **Η εφαρμογή δεν έχει root κλειδιά** | Το [`minio/init.sh`](minio/init.sh) της δίνει χρήστη με policy μόνο για `GetObject`/`PutObject`/`DeleteObject` σε αυτό το bucket — ούτε άλλο bucket, ούτε διαχείριση |
+
+### Δύο endpoints, ένα MinIO
+
+```
+S3_ENDPOINT         http://minio:9000       ο server ανεβάζει από μέσα στο δίκτυο
+S3_PUBLIC_ENDPOINT  http://localhost:9000   τα presigned URL που παίρνει ο browser
+```
+
+Η υπογραφή SigV4 καλύπτει και τον `Host`: URL υπογεγραμμένο για `minio:9000` απορρίπτεται
+όταν ζητηθεί ως `localhost:9000`. Είναι ακριβώς ο διαχωρισμός `AUTH_KEYCLOAK_ISSUER` /
+`KEYCLOAK_INTERNAL_ISSUER` που ήδη κάνει η εφαρμογή για το Keycloak.
+
+### Στήσιμο ως κώδικας
+
+Το [`minio/init.sh`](minio/init.sh) τρέχει σε one-shot container και είναι idempotent:
+φτιάχνει το bucket, κλείνει την ανώνυμη πρόσβαση, δημιουργεί τον χρήστη της εφαρμογής και
+του δένει το [`minio/app-policy.json`](minio/app-policy.json). Καμία ρύθμιση από console —
+ίδια αρχή με το realm του Keycloak.
+
+Το console του MinIO είναι στο [http://localhost:9001](http://localhost:9001)
+(`minioadmin` / `minioadmin`) για επιθεώρηση κατά την ανάπτυξη.
+
+> Η εικόνα είναι καρφωμένη στο `RELEASE.2025-04-22`: από τον Μάιο του 2025 το community
+> image κυκλοφορεί με ακρωτηριασμένο console, χωρίς object browser. Ο server είναι ο ίδιος.
+
+### Δεδομένα επίδειξης
+
+Το `npm run db:seed` δεν βάζει μόνο γραμμές: παράγει και ανεβάζει πραγματικά PDF μίας
+σελίδας για κάθε αναλυτική και κάθε τελικό κείμενο των δεδομένων επίδειξης
+([`lib/db/seed-pdf.ts`](lib/db/seed-pdf.ts)). Έτσι κάθε κουμπί «Λήψη PDF» της επίδειξης
+κατεβάζει όντως αρχείο, αντί για 404. Αν το MinIO δεν τρέχει, το seed προειδοποιεί και
+συνεχίζει — η βάση είναι το υποχρεωτικό κομμάτι.
+
+### Τι λείπει ακόμη
+
+- **Έλεγχος για κακόβουλο περιεχόμενο** (ClamAV ή ισοδύναμο) πριν το object γίνει διαθέσιμο
+- **Rate limiting** στα endpoints μεταφόρτωσης
+- **Versioning σε επίπεδο bucket** — σήμερα η νέα έκδοση αντικαθιστά την παλιά, που διαγράφεται
+
+---
+
 ## Υποδομή — τι έγινε, τι μένει
 
 Η υποδομή επιλέχθηκε με κριτήριο την **ελάχιστη εξάρτηση από εμπορικές υπηρεσίες** — ρητή
@@ -483,24 +579,24 @@ badge να μη χρησιμοποιούν αυθαίρετα χρώματα. Α
 | Database | **PostgreSQL 16.4** + Drizzle ORM | ✅ σχήμα, migrations, seed |
 | Write layer | **Server Actions** ([`lib/actions/`](lib/actions/)) | ✅ υλοποιημένο |
 | Read layer | Server Components → [`lib/db/queries.ts`](lib/db/queries.ts) | ✅ υλοποιημένο |
-| Orchestration | **docker-compose** | ✅ postgres + keycloak + app |
+| Orchestration | **docker-compose** | ✅ postgres + keycloak + minio + app |
 | Auth | **Keycloak** (OIDC) — δέχεται ομοσπονδία με SSO ιδρύματος | ✅ Auth.js v5, realm ως κώδικας |
-| Αποθήκευση αρχείων | **MinIO** (S3-compatible) | ⬜ τα `*_key` πεδία υπάρχουν ήδη στο σχήμα |
+| Αποθήκευση αρχείων | **MinIO** (S3-compatible) | ✅ upload με επαλήθευση, λήψη με presigned URL |
 
 Δεν υπάρχει ξεχωριστό backend service: τα Server Components διαβάζουν κατευθείαν από τη βάση
 και τα Server Actions γράφουν. Ένα deployment, μηδέν API surface προς συντήρηση.
 
-Τα services που μένουν μπαίνουν στο [`docker-compose.yml`](docker-compose.yml) **χωρίς
-profile**, ώστε να σηκώνονται με σκέτο `docker compose up -d`, όπως ήδη η PostgreSQL. Αρχές
-που τηρούνται:
+Τα backing services μπαίνουν στο [`docker-compose.yml`](docker-compose.yml) **χωρίς
+profile**, ώστε να σηκώνονται με σκέτο `docker compose up -d`. Αρχές που τηρούνται:
 
 - **Καρφωμένες εκδόσεις** (`postgres:16.4-alpine`, όχι `latest`) για αναπαραγωγιμότητα
 - **Healthcheck** σε κάθε service + `depends_on: condition: service_healthy`
 - **Named volumes** για τα δεδομένα· μηδενισμός με `docker compose down -v`
 - **Ρυθμίσεις μόνο από environment** (`DATABASE_URL`, `KEYCLOAK_ISSUER`, `S3_ENDPOINT`),
   με τα defaults ανάπτυξης στο `.env` (στο repo) και τα μυστικά στο `.env.local` (εκτός)
-- **Το Keycloak realm ως κώδικας** — export σε JSON, import με `--import-realm`· καμία
-  χειροκίνητη ρύθμιση από admin console
+- **Το Keycloak realm και το MinIO ως κώδικας** — realm σε JSON με `--import-realm`, bucket
+  και policy από το [`minio/init.sh`](minio/init.sh)· καμία χειροκίνητη ρύθμιση από console
+- **Ελάχιστα δικαιώματα** — η εφαρμογή δεν κρατά root credentials κανενός service
 - **Migrations ως ξεχωριστό ρητό βήμα**, ποτέ αυτόματα στο boot της εφαρμογής
 
 Το Keycloak τρέχει σήμερα ως **αυτόνομος πάροχος ταυτότητας** με δικούς του χρήστες. Σε
