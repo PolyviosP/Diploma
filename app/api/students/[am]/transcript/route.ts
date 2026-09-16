@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { students } from '@/lib/db/schema'
 import { currentUser } from '@/lib/session'
+import { ownershipDenial } from '@/lib/auth/identity'
 import { READ_ONLY_ERROR, studentIsLocked } from '@/lib/actions/lock'
 import {
   presignedDownloadUrl,
@@ -52,7 +53,10 @@ export async function GET(_request: Request, { params }: Params) {
   if (!student) return json(`Δεν βρέθηκε φοιτητής με ΑΜ ${am}.`, 404)
 
   const allowed = user.role === 'secretary' || student.userId === user.id
-  if (!allowed) return json('Δεν έχεις πρόσβαση στο αρχείο.', 403)
+  if (!allowed) {
+    const denial = await ownershipDenial(user.id, 'Δεν έχεις πρόσβαση στο αρχείο.')
+    return json(denial.error, denial.status)
+  }
   if (!student.key) return json('Δεν έχει αναρτηθεί αναλυτική βαθμολογία.', 404)
 
   const url = await presignedDownloadUrl(student.key, student.name ?? `${am}.pdf`)
@@ -71,7 +75,10 @@ export async function POST(request: Request, { params }: Params) {
   const { am } = await params
   const student = await findStudent(am)
   if (!student) return json(`Δεν βρέθηκε φοιτητής με ΑΜ ${am}.`, 404)
-  if (student.userId !== user.id) return json('Δεν είναι ο φάκελός σου.', 403)
+  if (student.userId !== user.id) {
+    const denial = await ownershipDenial(user.id, 'Δεν είναι ο φάκελός σου.')
+    return json(denial.error, denial.status)
+  }
   if (await studentIsLocked(user.id)) return json(READ_ONLY_ERROR, 409)
 
   const upload = await readPdfUpload(request)

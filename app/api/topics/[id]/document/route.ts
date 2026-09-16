@@ -23,6 +23,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { committeeMembers, diplomas } from '@/lib/db/schema'
 import { currentUser, type SessionUser } from '@/lib/session'
+import { ownershipDenial } from '@/lib/auth/identity'
 import { READ_ONLY_ERROR } from '@/lib/actions/lock'
 import {
   diplomaDocumentKey,
@@ -93,7 +94,10 @@ export async function GET(_request: Request, { params }: Params) {
   const { id } = await params
   const diploma = await findDiploma(id)
   if (!diploma) return json('Δεν βρέθηκε διπλωματική για αυτό το θέμα.', 404)
-  if (!(await canRead(user, diploma))) return json('Δεν έχεις πρόσβαση στο αρχείο.', 403)
+  if (!(await canRead(user, diploma))) {
+    const denial = await ownershipDenial(user.id, 'Δεν έχεις πρόσβαση στο αρχείο.')
+    return json(denial.error, denial.status)
+  }
   if (!diploma.documentKey) return json('Δεν έχει υποβληθεί τελικό κείμενο.', 404)
 
   const url = await presignedDownloadUrl(
@@ -116,7 +120,10 @@ export async function POST(request: Request, { params }: Params) {
   const { id } = await params
   const diploma = await findDiploma(id)
   if (!diploma) return json('Δεν βρέθηκε διπλωματική για αυτό το θέμα.', 404)
-  if (diploma.studentId !== user.id) return json('Δεν είναι η διπλωματική σου.', 403)
+  if (diploma.studentId !== user.id) {
+    const denial = await ownershipDenial(user.id, 'Δεν είναι η διπλωματική σου.')
+    return json(denial.error, denial.status)
+  }
   // Με την ολοκλήρωση ο φάκελος αρχειοθετείται (lib/actions/lock.ts).
   if (diploma.status === 'completed') return json(READ_ONLY_ERROR, 409)
 
