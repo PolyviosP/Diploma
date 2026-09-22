@@ -8,6 +8,6 @@
 node_modules
 .next/
 .DS_Store
-
+/docs
 # TypeScript
 *.tsbuildinfo
